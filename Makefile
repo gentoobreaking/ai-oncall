@@ -11,14 +11,13 @@ help: ## 列出可用目標
 proto-lint: ## buf lint 檢查 proto 契約
 	buf lint
 
-proto-gen: ## 產生 Go stubs（gate/gen）與 Python stubs（core/gen）
+proto-gen: ## 產生 Go stubs（gate/gen）與 Python stubs（core/src/oncall_core/_proto）
 	buf generate
 	PATH=$(HOME)/go/bin:$(PATH) protoc \
 		-I proto \
-		--python_out=core/gen \
-		--pyi_out=core/gen \
+		--python_out=core/src/oncall_core/_proto \
+		--pyi_out=core/src/oncall_core/_proto \
 		proto/oncall/v1/oncall.proto
-	touch core/gen/oncall/__init__.py core/gen/oncall/v1/__init__.py 2>/dev/null || true
 
 gate-build: ## 建置 gate binary
 	cd gate && $(GO) build -o bin/gate ./cmd/gate
