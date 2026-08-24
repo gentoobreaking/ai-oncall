@@ -81,6 +81,21 @@ MIGRATIONS: list[tuple[str, str]] = [
         """,
     ),
     (
+        "0007_action_items",
+        """
+        CREATE TABLE IF NOT EXISTS action_items (
+            id           TEXT PRIMARY KEY,
+            incident_id  TEXT NOT NULL,
+            description  TEXT NOT NULL,
+            owner        TEXT NOT NULL DEFAULT '',
+            due_ts       REAL,
+            status       TEXT NOT NULL DEFAULT 'open',
+            created_at   REAL NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_action_items_status ON action_items (status, due_ts);
+        """,
+    ),
+    (
         "0006_executed_actions",
         """
         CREATE TABLE IF NOT EXISTS executed_actions (
@@ -587,6 +602,45 @@ class Store:
                 (incident_id, kind),
             ).fetchone()
         return row is not None
+
+    # ------------------------------------------------------------------
+    # predictions 讀取（postmortem 用）
+    # ------------------------------------------------------------------
+
+    def latest_prediction(self, incident_id: str) -> sqlite3.Row | None:
+        with self._read() as conn:
+            row = conn.execute(
+                "SELECT * FROM predictions WHERE incident_id = ? ORDER BY created_at DESC LIMIT 1",
+                (incident_id,),
+            ).fetchone()
+        return row
+
+    # ------------------------------------------------------------------
+    # action items（F19）
+    # ------------------------------------------------------------------
+
+    def get_action_item(self, item_id: str) -> sqlite3.Row | None:
+        with self._read() as conn:
+            return conn.execute("SELECT * FROM action_items WHERE id = ?", (item_id,)).fetchone()
+
+    def list_action_items(self, incident_id: str | None = None) -> list[sqlite3.Row]:
+        q = "SELECT * FROM action_items"
+        params: tuple[str, ...] = ()
+        if incident_id:
+            q += " WHERE incident_id = ?"
+            params = (incident_id,)
+        with self._read() as conn:
+            return list(conn.execute(q + " ORDER BY created_at", params))
+
+    def overdue_action_items(self, now: float) -> list[sqlite3.Row]:
+        with self._read() as conn:
+            return list(
+                conn.execute(
+                    "SELECT * FROM action_items"
+                    " WHERE status = 'open' AND due_ts IS NOT NULL AND due_ts < ?",
+                    (now,),
+                )
+            )
 
     def close(self) -> None:
         self._conn.close()
