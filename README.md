@@ -34,14 +34,14 @@
 │  Telegram 傳輸層（送訊息/callback 轉發）
 └──────────┬────────── ▲───────┘
            │ gRPC (proto/oncall/v1)   │ DeliverNotification / CollectContext
-┌──────────▼──────────┐       └───────┐
-│ oncall-core (Python) │              │
-│  incident 狀態機＋SQLite store      │
-│  memory RAG ＋ brain 分診引擎       │
-│  runbook 批准閘門 ＋ executor ★    │  ← 全系統唯一碰生產環境的模組
-│  postmortem ＋ evalkit 評測         │
-└──────────┬───────────┘
-┌──────────▼───────────┐
+┌──────────▼───────────────┐       └───────┐
+│ oncall-core (Python)     │               │
+│  incident 狀態機＋SQLite store           │
+│  memory RAG ＋ brain 分診引擎            │
+│  runbook 批准閘門 ＋ executor ★          │  ← 全系統唯一碰生產環境的模組
+│  postmortem ＋ evalkit 評測              │
+└──────────┬───────────────┘
+┌──────────▼────────────┐
 │ oncall-ui (Python)    │  唯讀網頁，綁 127.0.0.1，資料源僅 core 的 readapi
 └───────────────────────┘
 ```
