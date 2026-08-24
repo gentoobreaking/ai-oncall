@@ -1,7 +1,6 @@
 // oncall-gate 進入點：webhook HTTP server + core gRPC client。
 //
-// T001 僅確立骨架：載入設定、建立結構化 logger（log/slog）、
-// 監聽 /healthz；ingest/collect/tgtransport 由後續任務接入。
+// 管線：AlertManager → /alerts（認證/冪等/正規化）→ gRPC ReportIncident → core
 package main
 
 import (
@@ -14,8 +13,21 @@ import (
 	"syscall"
 	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	oncallv1 "github.com/david/ai-oncall/gate/gen/oncall/v1"
 	"github.com/david/ai-oncall/gate/internal/config"
+	"github.com/david/ai-oncall/gate/internal/ingest"
+	"github.com/david/ai-oncall/gate/internal/metrics"
 )
+
+// coreClientAdapter 讓產生的 gRPC client 符合 ingest.CoreReporter 最小介面。
+type coreClientAdapter struct{ c oncallv1.OncallServiceClient }
+
+func (a coreClientAdapter) ReportIncident(ctx context.Context, in *oncallv1.ReportIncidentRequest) (*oncallv1.ReportIncidentResponse, error) {
+	return a.c.ReportIncident(ctx, in)
+}
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
@@ -33,15 +45,27 @@ func main() {
 		"loki", cfg.LokiURL,
 	)
 
+	// core gRPC client（core 掛掉時 ingest 回 502，AM 會重試）
+	grpcConn, err := grpc.NewClient(cfg.CoreAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		logger.Error("core gRPC client 建立失敗", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = grpcConn.Close() }()
+
+	m := metrics.New()
 	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+	mux.Handle("GET /healthz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
-	})
-	// /alerts 端點由 T002（ingest 認證/冪等）實作佔位
-	mux.HandleFunc("/alerts", func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "not implemented", http.StatusNotImplemented)
-	})
+	}))
+	mux.Handle("GET /metrics", m.Handler())
+	mux.Handle("POST /alerts", ingest.NewHandler(
+		cfg.SharedSecret,
+		coreClientAdapter{c: oncallv1.NewOncallServiceClient(grpcConn)},
+		ingest.NewStore(),
+		m,
+	))
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
