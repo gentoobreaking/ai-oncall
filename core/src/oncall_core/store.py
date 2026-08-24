@@ -274,16 +274,42 @@ class Store:
             )
             return cur.rowcount > 0
 
-    def list_incidents(self, status: str | None = None, limit: int = 100) -> list[Incident]:
+    def list_incidents(
+        self,
+        status: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+        order: str = "created_at DESC",
+    ) -> list[Incident]:
+        if order not in {"created_at DESC", "created_at ASC", "updated_at DESC"}:
+            order = "created_at DESC"
         q = "SELECT * FROM incidents"
+        params: list[object] = []
+        if status:
+            q += " WHERE status = ?"
+            params.append(status)
+        q += f" ORDER BY {order} LIMIT ? OFFSET ?"
+        params.extend((limit, offset))
+        with self._read() as conn:
+            rows = conn.execute(q, params).fetchall()
+        return [self._row_to_incident(r) for r in rows]
+
+    def count_incidents(self, status: str | None = None) -> int:
+        q = "SELECT COUNT(*) AS c FROM incidents"
         params: tuple[str, ...] = ()
         if status:
             q += " WHERE status = ?"
             params = (status,)
-        q += " ORDER BY created_at DESC LIMIT ?"
         with self._read() as conn:
-            rows = conn.execute(q, (*params, limit)).fetchall()
-        return [self._row_to_incident(r) for r in rows]
+            row = conn.execute(q, params).fetchone()
+        return int(row["c"])
+
+    def count_incidents_by_status(self) -> dict[str, int]:
+        with self._read() as conn:
+            rows = conn.execute(
+                "SELECT status, COUNT(*) AS c FROM incidents GROUP BY status"
+            ).fetchall()
+        return {r["status"]: r["c"] for r in rows}
 
     @staticmethod
     def _row_to_incident(row: sqlite3.Row) -> Incident:
