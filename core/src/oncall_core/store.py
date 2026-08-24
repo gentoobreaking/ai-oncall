@@ -286,7 +286,12 @@ class Store:
             cur = conn.execute(
                 "INSERT INTO timeline (incident_id, kind, payload_json, created_at)"
                 " VALUES (?, ?, ?, ?)",
-                (incident_id, kind, _json.dumps(payload, ensure_ascii=False), time.time()),
+                (
+                    incident_id,
+                    kind,
+                    _json.dumps(payload, ensure_ascii=False, sort_keys=True),
+                    time.time(),
+                ),
             )
             lastrow = cur.lastrowid
             # AUTOINCREMENT INSERT 必有 rowid
@@ -340,7 +345,7 @@ class Store:
                 (
                     incident_id,
                     kind,
-                    _json.dumps(payload, ensure_ascii=False),
+                    _json.dumps(payload, ensure_ascii=False, sort_keys=True),
                     time.time(),
                     prev_hash,
                     event_hash,
