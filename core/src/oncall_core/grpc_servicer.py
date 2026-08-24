@@ -19,10 +19,14 @@ log = get_logger(__name__)
 
 
 class OncallCoreServicer(oncall_pb2_grpc.OncallServiceServicer):
-    """gate → core 的 gRPC 介面實作（骨架；分診管線由 T009 接入）。"""
+    """gate → core 的 gRPC 介面實作。
 
-    def __init__(self, store: Store) -> None:
+    pipeline 非 None 時，新 Incident 會觸發非同步分診（背景 thread）。
+    """
+
+    def __init__(self, store: Store, run_triage=None) -> None:
         self._store = store
+        self._run_triage = run_triage
 
     # ------------------------------------------------------------------
     # gate → core
@@ -55,7 +59,8 @@ class OncallCoreServicer(oncall_pb2_grpc.OncallServiceServicer):
                 },
             )
             log.info("incident created", incident_id=incident.id, fingerprint=event.fingerprint)
-            # T009：此處觸發非同步分診管線（context 收集請求 → RAG → brain）
+            if self._run_triage is not None:
+                self._run_triage(incident.id)  # 非同步分診，不阻塞回應
             return oncall_pb2.ReportIncidentResponse(
                 accepted=True, incident_id=incident.id, message="created"
             )
@@ -111,9 +116,13 @@ class OncallCoreServicer(oncall_pb2_grpc.OncallServiceServicer):
         return oncall_pb2.CollectContextResponse(bundle=oncall_pb2.ContextBundle())
 
 
-def serve(store: Store, addr: str = "127.0.0.1:50051", max_workers: int = 8) -> grpc.Server:
+def serve(
+    store: Store, addr: str = "127.0.0.1:50051", max_workers: int = 8, run_triage=None
+) -> grpc.Server:
     """建立並回傳已註冊 servicer 的 gRPC server（呼叫端自行 start/wait）。"""
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers))
-    oncall_pb2_grpc.add_OncallServiceServicer_to_server(OncallCoreServicer(store), server)
+    oncall_pb2_grpc.add_OncallServiceServicer_to_server(
+        OncallCoreServicer(store, run_triage=run_triage), server
+    )
     server.add_insecure_port(addr)
     return server
