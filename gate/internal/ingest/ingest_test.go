@@ -158,11 +158,11 @@ func TestIdempotency_DifferentFingerprintsBothForward(t *testing.T) {
 func TestNormalize_TableDriven(t *testing.T) {
 	now := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
 	tests := []struct {
-		name        string
-		payload     string
-		wantErr     bool
-		wantEvents  int
-		check       func(t *testing.T, ev *oncallv1.AlertEvent)
+		name       string
+		payload    string
+		wantErr    bool
+		wantEvents int
+		check      func(t *testing.T, ev *oncallv1.AlertEvent)
 	}{
 		{
 			name: "完整 payload",

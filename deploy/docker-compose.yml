@@ -9,6 +9,7 @@
 
 services:
   gate:
+    container_name: oncall-gate
     build:
       context: ..
       dockerfile: deploy/gate.Dockerfile
@@ -22,6 +23,9 @@ services:
       PROMETHEUS_URL: ${PROMETHEUS_URL:-http://prometheus:9090}
       LOKI_URL: ${LOKI_URL:-http://loki:3100}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      GRPC_LISTEN_ADDR: 0.0.0.0:50060
+    expose:
+      - "50060"   # gate gRPC——core 反向呼叫推播/context 收集，僅限內網
     ports:
       # webhook 端點：AlertManager 需觸及；生產環境建議僅開內網
       - "${GATE_WEBHOOK_BIND:-127.0.0.1}:8080:8080"
@@ -29,6 +33,7 @@ services:
       - gate-data:/data
 
   core:
+    container_name: oncall-core
     build:
       context: ..
       dockerfile: deploy/core.Dockerfile
@@ -36,6 +41,7 @@ services:
     restart: unless-stopped
     environment:
       - SHADOW_MODE=${SHADOW_MODE:-1}   # 上線門檻通過前必開（spec §5 標準 11）
+      - GATE_ADDR=gate:50060
     volumes:
       - core-data:/data
     expose:
@@ -43,6 +49,7 @@ services:
       - "8090"    # readapi——僅供 ui
 
   ui:
+    container_name: oncall-ui
     build:
       context: ..
       dockerfile: deploy/ui.Dockerfile

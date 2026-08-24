@@ -61,11 +61,11 @@ func (s *ScalingClient) Collect(ctx context.Context, labels map[string]string, s
 		from, to := points[i-1].replicas, points[i].replicas
 		if from != to {
 			frag.scaling = append(frag.scaling, &oncallv1.ScalingEvent{
-				Service:     svc,
+				Service:      svc,
 				ReplicasFrom: int32(from),
 				ReplicasTo:   int32(to),
-				AtUnix:      int64(points[i].ts),
-				Reason:      scalingReason(from, to),
+				AtUnix:       int64(points[i].ts),
+				Reason:       scalingReason(from, to),
 			})
 		}
 	}

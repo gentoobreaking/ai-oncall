@@ -29,9 +29,9 @@ type Router struct {
 	core    CoreForwarder
 	logger  *slog.Logger
 
-	mu      sync.Mutex
-	offset  int64 // getUpdates offset（最後處理到的 update_id + 1）
-	pending []*oncallv1.ActionCallbackRequest
+	mu         sync.Mutex
+	offset     int64 // getUpdates offset（最後處理到的 update_id + 1）
+	pending    []*oncallv1.ActionCallbackRequest
 	maxPending int
 }
 
@@ -55,7 +55,7 @@ func NewRouter(token, apiBase string, core CoreForwarder, logger *slog.Logger) *
 
 // telegramUpdate 只取需要的欄位。
 type telegramUpdate struct {
-	UpdateID int64 `json:"update_id"`
+	UpdateID      int64 `json:"update_id"`
 	CallbackQuery *struct {
 		ID   string `json:"id"`
 		From struct {
@@ -86,8 +86,8 @@ func (r *Router) FetchOnce(ctx context.Context) error {
 	}
 
 	var body struct {
-		OK     bool              `json:"ok"`
-		Result []telegramUpdate  `json:"result"`
+		OK     bool             `json:"ok"`
+		Result []telegramUpdate `json:"result"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		return err

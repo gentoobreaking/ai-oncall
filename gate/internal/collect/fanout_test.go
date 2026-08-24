@@ -42,7 +42,6 @@ func (f *fakeCollector) Collect(ctx context.Context, _ map[string]string, _, _ t
 	return f.frag, nil
 }
 
-
 // 四路「並行」啟動：若為序列執行，總耗時會超過單路延遲總和的一半以上。
 func TestFanOut_RunsInParallel(t *testing.T) {
 	started := make(chan string, 4)

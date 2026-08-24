@@ -124,7 +124,7 @@ func TestLoad_BadCollectTimeout(t *testing.T) {
 
 // URL 格式驗證（Validate 由前往後檢查，先回報第一個錯）。
 func TestValidate_BadURL(t *testing.T) {
-	cfg := Config{SharedSecret: "x", CoreAddr: "c:1", ListenAddr: "a:1", PrometheusURL: "ftp://p", LokiURL: "http://l"}
+	cfg := Config{SharedSecret: "x", CoreAddr: "c:1", ListenAddr: "a:1", GRPCListenAddr: "g:1", PrometheusURL: "ftp://p", LokiURL: "http://l"}
 	if err := cfg.Validate(); err == nil || !contains(err.Error(), "PROMETHEUS_URL") {
 		t.Errorf("Validate() err = %v, 應指出 PROMETHEUS_URL", err)
 	}

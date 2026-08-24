@@ -16,6 +16,9 @@ import (
 type Config struct {
 	// ListenAddr webhook HTTP server 監聽位址（含 :port）
 	ListenAddr string
+	// GRPCListenAddr gate 端 gRPC server 監聽位址（core 反向呼叫：
+	// DeliverNotification / CollectContext）
+	GRPCListenAddr string
 	// SharedSecret AlertManager → gate webhook 的 Bearer token（F17-A）
 	SharedSecret string
 	// PrometheusURL Prometheus API 端點，如 http://prometheus:9090
@@ -38,6 +41,7 @@ type Config struct {
 func defaults() Config {
 	return Config{
 		ListenAddr:     "127.0.0.1:8080",
+		GRPCListenAddr: "127.0.0.1:50060",
 		PrometheusURL:  "http://127.0.0.1:9090",
 		LokiURL:        "http://127.0.0.1:3100",
 		CollectTimeout: 20 * time.Second,
@@ -47,6 +51,7 @@ func defaults() Config {
 // EnvKeys 是 config 讀取的全部環境變數名稱（測試隔離用）。
 var EnvKeys = []string{
 	"LISTEN_ADDR",
+	"GRPC_LISTEN_ADDR",
 	"SHARED_SECRET",
 	"PROMETHEUS_URL",
 	"LOKI_URL",
@@ -67,6 +72,9 @@ func Load() (Config, error) {
 	}
 	if v := get("LISTEN_ADDR"); v != "" {
 		cfg.ListenAddr = v
+	}
+	if v := get("GRPC_LISTEN_ADDR"); v != "" {
+		cfg.GRPCListenAddr = v
 	}
 	if v := get("SHARED_SECRET"); v != "" {
 		cfg.SharedSecret = v
@@ -117,6 +125,9 @@ func (c Config) Validate() error {
 	}
 	if !strings.Contains(c.ListenAddr, ":") {
 		return fmt.Errorf("LISTEN_ADDR 格式錯誤: %q（需含 :port）", c.ListenAddr)
+	}
+	if !strings.Contains(c.GRPCListenAddr, ":") {
+		return fmt.Errorf("GRPC_LISTEN_ADDR 格式錯誤: %q（需含 :port）", c.GRPCListenAddr)
 	}
 	if !strings.HasPrefix(c.PrometheusURL, "http") {
 		return fmt.Errorf("PROMETHEUS_URL 必須以 http(s) 開頭: %q", c.PrometheusURL)

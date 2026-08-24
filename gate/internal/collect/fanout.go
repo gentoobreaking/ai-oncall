@@ -60,9 +60,9 @@ func FanOut(ctx context.Context, collectors []Collector, labels map[string]strin
 	}
 
 	var (
-		wg          sync.WaitGroup
-		mu          sync.Mutex
-		degraded    degradedList
+		wg       sync.WaitGroup
+		mu       sync.Mutex
+		degraded degradedList
 	)
 
 	for _, c := range collectors {

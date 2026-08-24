@@ -60,11 +60,11 @@ func (d *DeploymentsFile) Collect(_ context.Context, labels map[string]string, s
 			continue
 		}
 		frag.deployments = append(frag.deployments, &oncallv1.DeploymentEvent{
-			Service:       rec.Service,
-			Revision:      rec.Revision,
-			Deployer:      rec.Deployer,
+			Service:        rec.Service,
+			Revision:       rec.Revision,
+			Deployer:       rec.Deployer,
 			DeployedAtUnix: rec.DeployedAt.Unix(),
-			Source:        rec.Source,
+			Source:         rec.Source,
 		})
 	}
 	return frag, sc.Err()
