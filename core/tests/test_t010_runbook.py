@@ -121,8 +121,6 @@ def gate(store: Store, indexer: KnowledgeIndexer):
     return g, notifier
 
 
-
-
 def make_rb(steps_risk: str = "mutating") -> tuple[Runbook, RunbookStep]:
     rb = Runbook(name="rb-test", service="api", description="d")
     step = RunbookStep(name="do-it", action="kubectl rollout undo", risk=steps_risk)

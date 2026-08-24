@@ -81,6 +81,16 @@ MIGRATIONS: list[tuple[str, str]] = [
         """,
     ),
     (
+        "0006_executed_actions",
+        """
+        CREATE TABLE IF NOT EXISTS executed_actions (
+            action_key  TEXT PRIMARY KEY,
+            started_at  REAL NOT NULL,
+            done_at     REAL
+        );
+        """,
+    ),
+    (
         "0005_knowledge_chunks",
         """
         CREATE TABLE IF NOT EXISTS knowledge_chunks (
@@ -543,6 +553,40 @@ class Store:
         with self._read() as conn:
             row = conn.execute("SELECT COUNT(*) AS c FROM knowledge_chunks").fetchone()
         return int(row["c"])
+
+    # ------------------------------------------------------------------
+    # executed_actions（executor 冪等，§B.3-1）
+    # ------------------------------------------------------------------
+
+    def has_executed_action(self, action_key: str) -> bool:
+        with self._read() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM executed_actions WHERE action_key = ? AND done_at IS NOT NULL",
+                (action_key,),
+            ).fetchone()
+        return row is not None
+
+    def record_action_started(self, action_key: str) -> None:
+        with self._write() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO executed_actions (action_key, started_at) VALUES (?, ?)",
+                (action_key, time.time()),
+            )
+
+    def mark_action_done(self, action_key: str) -> None:
+        with self._write() as conn:
+            conn.execute(
+                "UPDATE executed_actions SET done_at = ? WHERE action_key = ?",
+                (time.time(), action_key),
+            )
+
+    def has_timeline_kind(self, incident_id: str, kind: str) -> bool:
+        with self._read() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM timeline WHERE incident_id = ? AND kind = ? LIMIT 1",
+                (incident_id, kind),
+            ).fetchone()
+        return row is not None
 
     def close(self) -> None:
         self._conn.close()
