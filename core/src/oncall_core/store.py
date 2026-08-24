@@ -73,6 +73,13 @@ MIGRATIONS: list[tuple[str, str]] = [
             ON predictions (incident_id, created_at);
         """,
     ),
+    (
+        "0004_timeline_hashchain",
+        """
+        ALTER TABLE timeline ADD COLUMN prev_hash TEXT;
+        ALTER TABLE timeline ADD COLUMN hash TEXT;
+        """,
+    ),
 ]
 
 
@@ -259,6 +266,92 @@ class Store:
                     (incident_id,),
                 )
             )
+
+    # ------------------------------------------------------------------
+    # timeline 雜湊鏈（T006，§E.3）
+    # ------------------------------------------------------------------
+
+    def last_chained_hash(self, incident_id: str) -> str | None:
+        """回傳該 incident 最後一筆雜湊鏈事件的 hash；無則 None。"""
+        with self._read() as conn:
+            row = conn.execute(
+                "SELECT hash FROM timeline"
+                " WHERE incident_id = ? AND hash IS NOT NULL"
+                " ORDER BY id DESC LIMIT 1",
+                (incident_id,),
+            ).fetchone()
+        return row["hash"] if row else None
+
+    def append_chained_event(
+        self,
+        incident_id: str,
+        kind: str,
+        payload: dict[str, object],
+        *,
+        prev_hash: str | None = None,
+        event_hash: str | None = None,
+    ) -> int:
+        """寫入含雜湊欄位的時間線事件。
+
+        prev_hash/event_hash 未提供時為未鏈結事件（舊路徑相容）；
+        正式路徑一律經 HashChain.append() 計算後傳入。
+        """
+        import json as _json
+
+        with self._write() as conn:
+            cur = conn.execute(
+                "INSERT INTO timeline (incident_id, kind, payload_json, created_at,"
+                " prev_hash, hash) VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    incident_id,
+                    kind,
+                    _json.dumps(payload, ensure_ascii=False),
+                    time.time(),
+                    prev_hash,
+                    event_hash,
+                ),
+            )
+            lastrow = cur.lastrowid
+            # AUTOINCREMENT INSERT 必有 rowid
+            assert lastrow is not None
+            return int(lastrow)
+
+    def tamper_timeline_payload(self, event_id: int, new_payload: dict[str, object]) -> None:
+        """直接改寫事件 payload——僅供竄改偵測測試使用。"""
+        import json as _json
+
+        with self._write() as conn:
+            conn.execute(
+                "UPDATE timeline SET payload_json = ? WHERE id = ?",
+                (_json.dumps(new_payload, ensure_ascii=False), event_id),
+            )
+
+    # ------------------------------------------------------------------
+    # correlate 聚合查詢（§A.2）
+    # ------------------------------------------------------------------
+
+    def recent_unresolved_incidents(self, window_seconds: float) -> list[Incident]:
+        """過去 window_seconds 內更新過、且尚未 resolved 的 incidents。"""
+        import time as _time
+
+        cutoff = _time.time() - window_seconds
+        with self._read() as conn:
+            rows = conn.execute(
+                "SELECT * FROM incidents"
+                " WHERE status != 'resolved' AND updated_at >= ?"
+                " ORDER BY created_at DESC",
+                (cutoff,),
+            ).fetchall()
+        return [self._row_to_incident(r) for r in rows]
+
+    def touch_incident(self, incident_id: str) -> bool:
+        """更新 updated_at（聚合併入時刷新時間窗）。"""
+        with self._write() as conn:
+            cur = conn.execute(
+                "UPDATE incidents SET updated_at = ? WHERE id = ?",
+                (time.time(), incident_id),
+            )
+            return cur.rowcount > 0
 
     # ------------------------------------------------------------------
     # predictions（分診紀錄；prompt_version 綁定 F16）
