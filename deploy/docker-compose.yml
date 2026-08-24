@@ -42,6 +42,12 @@ services:
     environment:
       - SHADOW_MODE=${SHADOW_MODE:-1}   # 上線門檻通過前必開（spec §5 標準 11）
       - GATE_ADDR=gate:50060
+      # LLM 分診 provider 鏈（name|base_url|model|api_key，逗號分隔備援）；
+      # 未設定 = 離線模式（只建檔不分診）
+      - LLM_PROVIDERS=${LLM_PROVIDERS:-}
+      - EXECUTOR_MODE=${EXECUTOR_MODE:-log-only}
+      # 稽核目錄須落在可寫的資料卷（相對路徑會因唯讀工作目錄炸 PermissionError）
+      - AUDIT_DIR=/data/audit
     volumes:
       - core-data:/data
     expose:
