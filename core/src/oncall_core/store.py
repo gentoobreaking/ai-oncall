@@ -81,6 +81,18 @@ MIGRATIONS: list[tuple[str, str]] = [
         """,
     ),
     (
+        "0008_shadow_scores",
+        """
+        CREATE TABLE IF NOT EXISTS shadow_scores (
+            incident_id    TEXT PRIMARY KEY,
+            cause_correct  INTEGER NOT NULL,
+            action_usable  INTEGER NOT NULL,
+            reviewer       TEXT NOT NULL DEFAULT '',
+            created_at     REAL NOT NULL
+        );
+        """,
+    ),
+    (
         "0007_action_items",
         """
         CREATE TABLE IF NOT EXISTS action_items (
@@ -702,6 +714,29 @@ class Store:
                     (now,),
                 )
             )
+
+    # ------------------------------------------------------------------
+    # shadow scores（F15/§D.4）
+    # ------------------------------------------------------------------
+
+    def record_shadow_score(
+        self, *, incident_id: str, cause_correct: bool, action_usable: bool, reviewer: str
+    ) -> None:
+        with self._write() as conn:
+            conn.execute(
+                "INSERT INTO shadow_scores"
+                " (incident_id, cause_correct, action_usable, reviewer, created_at)"
+                " VALUES (?, ?, ?, ?, ?)"
+                " ON CONFLICT(incident_id) DO UPDATE SET"
+                " cause_correct=excluded.cause_correct,"
+                " action_usable=excluded.action_usable,"
+                " reviewer=excluded.reviewer",
+                (incident_id, int(cause_correct), int(action_usable), reviewer, time.time()),
+            )
+
+    def all_shadow_scores(self) -> list[sqlite3.Row]:
+        with self._read() as conn:
+            return list(conn.execute("SELECT * FROM shadow_scores"))
 
     def close(self) -> None:
         self._conn.close()

@@ -263,6 +263,15 @@ class TriagePipeline:
         if report.missing_context:
             lines += ["", "## Missing context"]
             lines.extend(f"- {m}" for m in report.missing_context)
+        # §D.4 人工評分欄位——評分寫回統計庫是上線門檻依據
+        lines += [
+            "",
+            "## Review (human)",
+            "- 原因正確: [ ] yes [ ] no",
+            "- 建議可用: [ ] yes [ ] no",
+            "- reviewer: ____",
+            "- scored_at: ____",
+        ]
         path.write_text("\n".join(lines), encoding="utf-8")
         return path
 
