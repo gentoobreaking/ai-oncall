@@ -84,6 +84,7 @@ docs/deploy.md          從零部署指南（含 WireGuard/Tailscale 組網與�
 | Python | ≥ 3.11（搭配 [uv](https://docs.astral.sh/uv/)） |
 | protoc / buf | 最新版 |
 | protoc-gen-go / protoc-gen-go-grpc | 安裝於 `~/go/bin` |
+| Docker | 含 compose（容器化路徑；非必須） |
 
 ```bash
 go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -95,11 +96,36 @@ go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
 
 ## Quick Start
 
+### 容器化（推薦）
+
+```bash
+# 建置三映像（alpine base、multi-stage、non-root）
+make docker-build
+
+# 啟動全棧（gate :8080 / core gRPC :50051 + readapi :8090 / ui :8091）
+SHARED_SECRET=dev-secret make docker-up
+
+# 送一筆警報
+curl -X POST http://127.0.0.1:8080/alerts \
+  -H "Authorization: Bearer dev-secret" \
+  -H "Content-Type: application/json" \
+  -d '{"alerts":[{"fingerprint":"demo-1","status":"firing",\
+       "labels":{"alertname":"HighLatency","service":"api","severity":"critical"}}]}'
+
+# 驗證
+curl http://127.0.0.1:8080/metrics   # gate 計數器
+curl http://127.0.0.1:8091/healthz   # ui
+```
+
+預設 `SHADOW_MODE=1`（影子模式）：分診照跑但推播與執行跳過，報告寫入 `shadow_reports/`。
+
+### 本機直接執行
+
 ```bash
 # 1. proto 契約檢查與雙側 stubs 產生
 make proto-lint && make proto-gen
 
-# 2. 啟動 core（gRPC :50051）
+# 2. 啟動 core（gRPC :50051 ＋ readapi :8090）
 cd core && uv sync
 uv run python -m oncall_core --db data/oncall.db --addr 127.0.0.1:50051
 
@@ -107,13 +133,10 @@ uv run python -m oncall_core --db data/oncall.db --addr 127.0.0.1:50051
 cd gate && make gate-build
 SHARED_SECRET=dev-secret CORE_ADDR=127.0.0.1:50051 ./bin/gate
 
-# 4. 送一筆警報
-curl -X POST http://127.0.0.1:8080/alerts \
-  -H "Authorization: Bearer dev-secret" \
-  -d '{"alerts":[{"fingerprint":"demo-1","status":"firing",
-       "labels":{"alertname":"HighLatency","service":"api","severity":"critical"}}]}'
+# 4. 送一筆警報（同上 curl）
 
 # 5. 唯讀 UI（需 core 先啟動 readapi；見下方 Configuration）
+cd ui && uv sync && uv run python -m oncall_ui
 ```
 
 未設定 `TELEGRAM_BOT_TOKEN` 時推播自動降級為 log-only，不影響其餘流程。
@@ -133,11 +156,32 @@ curl -X POST http://127.0.0.1:8080/alerts \
 | `COLLECT_TIMEOUT` | | `20s` | context 收集總逾時 |
 | `TELEGRAM_BOT_TOKEN` | | （log-only 降級） | |
 
-### core / ui
+core / ui 環境變數：
 
 - `SHADOW_MODE=1`：影子模式（上線前必開）
 - `READAPI_URL`（ui）：readapi 位址，預設 `http://127.0.0.1:8090`
 - 完整範本見 `deploy/*.env.example`
+
+core 啟動參數：
+
+| 參數 | 預設 | 說明 |
+|---|---|---|
+| `--db` | `data/oncall.db` | SQLite 路徑 |
+| `--addr` | `127.0.0.1:50051` | gRPC 監聽位址 |
+| `--readapi-addr` | `127.0.0.1:8090` | 唯讀 HTTP API 監聽位址 |
+
+ui 啟動參數：`--host`（預設 127.0.0.1）、`--port`（8091）、`--readapi-url`。
+
+### 容器環境變數
+
+容器內埠口與路徑已固定（core：gRPC `0.0.0.0:50051`＋readapi `0.0.0.0:8090`，
+SQLite 在 `/data` volume）；host 端綁定由 compose 變數控制：
+
+| 變數 | 預設 | 說明 |
+|---|---|---|
+| `SHARED_SECRET` | （必填） | gate webhook token |
+| `GATE_WEBHOOK_BIND` | `127.0.0.1` | gate webhook 的 host 綁定 |
+| `UI_BIND` | `127.0.0.1` | ui 的 host 綁定 |
 
 ## API
 
@@ -186,9 +230,13 @@ cd ui   && uv run pytest -q        # ui 7 tests
 
 ## Deployment
 
-完整從零部署步驟（WireGuard/Tailscale 組網、systemd units、AlertManager 對接、
-公網掃描安全驗證）見 [`docs/deploy.md`](docs/deploy.md)；容器範本見
+**容器化路徑**：三服務各有 Dockerfile（`deploy/*.Dockerfile`）——multi-stage、
+alpine base、non-root；gate 最終映像僅單 binary（壓縮後約 9MB）。compose 以
+build 為本，webhook/ui 預設只綁本機、gRPC/readapi 不出內網，詳見
 [`deploy/docker-compose.yml`](deploy/docker-compose.yml)。
+
+完整從零部署步驟（WireGuard/Tailscale 組網、systemd units、AlertManager 對接、
+公網掃描安全驗證）見 [`docs/deploy.md`](docs/deploy.md)。
 
 要點：
 
@@ -224,6 +272,12 @@ make help        # 列出所有目標
 make lint        # buf lint + go vet (+golangci-lint)
 make test        # go test
 make proto-gen   # 改 proto 後同步重生雙側 stubs（同一 commit 內更新兩側）
+
+# 容器化
+make docker-build   # 建置 oncall-gate/core/ui 三映像
+make docker-up      # SHARED_SECRET=<secret> make docker-up
+make docker-down    # 停止
+make docker-clean   # 移除容器＋本地映像＋volume
 ```
 
 品質閘門：core/ui 以 `ruff check` + `ruff format` + `pyright` 歸零為準；
