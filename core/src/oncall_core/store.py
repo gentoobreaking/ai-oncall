@@ -254,6 +254,41 @@ class Store:
         assert created is not None
         return created, True
 
+    def ensure_incident(
+        self,
+        incident_id: str,
+        *,
+        fingerprint: str,
+        title: str = "",
+        labels: dict[str, str] | None = None,
+        status: str = "open",
+    ) -> Incident:
+        """以指定 ID 確保 incident 存在（evalkit 回放件用）；冪等。"""
+        import json as _json
+
+        existing = self.get_incident(incident_id)
+        if existing is not None:
+            return existing
+        now = time.time()
+        with self._write() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO incidents (id, fingerprint, status, severity,"
+                " title, labels_json, created_at, updated_at)"
+                " VALUES (?, ?, ?, 0, ?, ?, ?, ?)",
+                (
+                    incident_id,
+                    fingerprint,
+                    status,
+                    title,
+                    _json.dumps(labels or {}, ensure_ascii=False),
+                    now,
+                    now,
+                ),
+            )
+        created = self.get_incident(incident_id)
+        assert created is not None
+        return created
+
     def get_incident(self, incident_id: str) -> Incident | None:
         with self._read() as conn:
             row = conn.execute("SELECT * FROM incidents WHERE id = ?", (incident_id,)).fetchone()
