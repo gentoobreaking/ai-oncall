@@ -260,8 +260,10 @@ def test_timeout_twice_abandons_with_full_trail(store: Store, indexer: Knowledge
     req = gate.submit(incident_id, rb, step).request_id
     assert req is not None
 
-    gate.on_timeout(req)  # 第一次：升級
-    final = gate.on_timeout(req)  # 第二次：棄單
+    gate.on_timeout(req)  # 第一次：升級至 secondary
+    o2 = gate.on_timeout(req)  # 第二次：升級至 manager（鏈上還有下一位）
+    assert o2.state is ApprovalState.ESCALATED
+    final = gate.on_timeout(req)  # 第三次：鏈盡，棄單
     assert final.state is ApprovalState.ABANDONED
 
     events = store.timeline(incident_id)
@@ -270,7 +272,7 @@ def test_timeout_twice_abandons_with_full_trail(store: Store, indexer: Knowledge
         assert kind in trail, f"軌跡缺 {kind}"
     abandoned_event = next(r for r in events if r["kind"] == "approval_abandoned")
     payload = __import__("json").loads(abandoned_event["payload_json"])
-    assert set(payload["attempts"]) == {"admin", "secondary"}
+    assert set(payload["attempts"]) == {"admin", "secondary", "manager"}
     assert verify_chain_ok(store, incident_id)
 
 

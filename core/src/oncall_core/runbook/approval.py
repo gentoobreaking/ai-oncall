@@ -206,26 +206,27 @@ class ApprovalGate:
             pending.notified_targets[-1] if pending.notified_targets else self._initial_target
         )
 
-        if pending.timeout_count == 1:
-            # 升級而非棄單：再提醒一次 + 排班表換渠道
-            next_target = self._escalation.next_target(last_target) or last_target
+        next_target = self._escalation.next_target(last_target)
+        if pending.timeout_count == 1 or next_target is not None:
+            # §B.2 升級而非棄單：再提醒一次 + 排班表換渠道（鏈上還有下一位）
+            target = next_target or last_target
             pending.state = ApprovalState.ESCALATED
-            pending.notified_targets.append(next_target)
+            pending.notified_targets.append(target)
             self._notify(
                 pending,
-                next_target,
-                f"[再次提醒] 批准請求 {pending.step.name} 已逾時, 升級至 {next_target}",
+                target,
+                f"[再次提醒] 批准請求 {pending.step.name} 已逾時, 升級至 {target}",
             )
             self._chain.append(
                 pending.incident_id,
                 "approval_escalated",
-                {"request_id": request_id, "from": last_target, "to": next_target},
+                {"request_id": request_id, "from": last_target, "to": target},
             )
             return GateOutcome(
-                ApprovalState.ESCALATED, request_id=request_id, detail=f"escalated to {next_target}"
+                ApprovalState.ESCALATED, request_id=request_id, detail=f"escalated to {target}"
             )
 
-        # 再逾時才棄單；時間線保留完整嘗試軌跡——Incident 未結不默默消失
+        # 鏈上已無下一位且再逾時 → 棄單；時間線保留完整嘗試軌跡——Incident 未結不默默消失
         pending.state = ApprovalState.ABANDONED
         del self._pending[request_id]
         self._chain.append(
