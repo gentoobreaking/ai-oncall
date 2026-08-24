@@ -80,6 +80,25 @@ MIGRATIONS: list[tuple[str, str]] = [
         ALTER TABLE timeline ADD COLUMN hash TEXT;
         """,
     ),
+    (
+        "0005_knowledge_chunks",
+        """
+        CREATE TABLE IF NOT EXISTS knowledge_chunks (
+            id            TEXT PRIMARY KEY,
+            source        TEXT NOT NULL,
+            ref_id        TEXT,
+            text          TEXT NOT NULL,
+            embedding     TEXT NOT NULL,
+            embedding_provider TEXT NOT NULL DEFAULT 'hash',
+            service       TEXT,
+            cluster       TEXT,
+            severity      TEXT,
+            created_at    REAL NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_kc_meta ON knowledge_chunks (service, cluster, severity);
+        CREATE INDEX IF NOT EXISTS idx_kc_source ON knowledge_chunks (source, ref_id);
+        """,
+    ),
 ]
 
 
@@ -95,6 +114,22 @@ class Incident:
     labels: dict[str, str]
     created_at: float
     updated_at: float
+
+
+@dataclass(slots=True)
+class KnowledgeChunk:
+    """RAG 知識庫片段（memory §D.1/D.2）。"""
+
+    id: str
+    source: str
+    ref_id: str | None
+    text: str
+    embedding_vector: list[float]
+    embedding_provider: str
+    service: str | None
+    cluster: str | None
+    severity: str | None
+    created_at: float
 
 
 class Store:
@@ -387,6 +422,122 @@ class Store:
                 ),
             )
         return pred_id
+
+    # ------------------------------------------------------------------
+    # knowledge chunks（memory RAG，§D.1/D.2）
+    # ------------------------------------------------------------------
+
+    def insert_knowledge_chunk(
+        self,
+        *,
+        source: str,
+        text: str,
+        embedding: list[float],
+        embedding_provider: str = "hash",
+        service: str | None = None,
+        cluster: str | None = None,
+        severity: str | None = None,
+        ref_id: str | None = None,
+    ) -> KnowledgeChunk:
+        import json as _json
+
+        chunk_id = f"kc-{uuid.uuid4().hex[:12]}"
+        now = time.time()
+        with self._write() as conn:
+            conn.execute(
+                "INSERT INTO knowledge_chunks (id, source, ref_id, text, embedding,"
+                " embedding_provider, service, cluster, severity, created_at)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    chunk_id,
+                    source,
+                    ref_id,
+                    text,
+                    _json.dumps(embedding),
+                    embedding_provider,
+                    service,
+                    cluster,
+                    severity,
+                    now,
+                ),
+            )
+        return KnowledgeChunk(
+            id=chunk_id,
+            source=source,
+            ref_id=ref_id,
+            text=text,
+            embedding_vector=embedding,
+            embedding_provider=embedding_provider,
+            service=service,
+            cluster=cluster,
+            severity=severity,
+            created_at=now,
+        )
+
+    def query_knowledge_chunks(
+        self,
+        *,
+        service: str | None = None,
+        cluster: str | None = None,
+        severity: str | None = None,
+        time_range: tuple[float, float] | None = None,
+        sources: list[str] | None = None,
+    ) -> list[KnowledgeChunk]:
+        """metadata 等值/區間過濾（§D.1）；相似度計算交給呼叫端。"""
+        import json as _json
+
+        clauses = []
+        params: list[object] = []
+        if service is not None:
+            clauses.append("service = ?")
+            params.append(service)
+        if cluster is not None:
+            clauses.append("cluster = ?")
+            params.append(cluster)
+        if severity is not None:
+            clauses.append("severity = ?")
+            params.append(severity)
+        if time_range is not None:
+            clauses.append("created_at >= ? AND created_at <= ?")
+            params.extend(time_range)
+        if sources:
+            clauses.append(f"source IN ({','.join('?' for _ in sources)})")
+            params.extend(sources)
+
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        with self._read() as conn:
+            rows = conn.execute(
+                f"SELECT * FROM knowledge_chunks {where} ORDER BY created_at DESC",
+                params,
+            ).fetchall()
+        return [
+            KnowledgeChunk(
+                id=r["id"],
+                source=r["source"],
+                ref_id=r["ref_id"],
+                text=r["text"],
+                embedding_vector=_json.loads(r["embedding"]),
+                embedding_provider=r["embedding_provider"],
+                service=r["service"],
+                cluster=r["cluster"],
+                severity=r["severity"],
+                created_at=r["created_at"],
+            )
+            for r in rows
+        ]
+
+    def delete_knowledge_by_ref(self, source: str, ref_id: str) -> int:
+        with self._write() as conn:
+            cur = conn.execute(
+                "DELETE FROM knowledge_chunks WHERE source = ? AND ref_id = ?",
+                (source, ref_id),
+            )
+            return cur.rowcount
+
+    def count_knowledge_chunks(self) -> int:
+        with self._read() as conn:
+            row = conn.execute("SELECT COUNT(*) AS c FROM knowledge_chunks").fetchone()
+        return int(row["c"])
 
     def close(self) -> None:
         self._conn.close()
