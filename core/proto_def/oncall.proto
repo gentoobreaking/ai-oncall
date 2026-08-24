@@ -1,0 +1,203 @@
+// oncall.proto — gate ↔ core 雙向契約（單一事實來源）
+//
+// spec.md §2.2：跨服務只允許透過 proto 契約通訊。
+//   ReportIncident      : gate → core  警報進入，觸發分診
+//   DeliverNotification : core → gate  core 請求 gate 代發 Telegram 訊息
+//   ActionCallback      : gate → core  使用者按下批准/拒絕按鈕
+//   CollectContext      : core → gate  core 請求 gate 併發收集現場
+//
+// 為通過 buf STANDARD lint（RPC_RESPONSE_STANDARD_NAME / RPC_REQUEST_RESPONSE_UNIQUE），
+// 每個 RPC 使用獨立的 Request/Response 包裝訊息；Ack 欄位內嵌於各 Response。
+
+syntax = "proto3";
+
+package oncall.v1;
+
+option go_package = "github.com/david/ai-oncall/gate/gen/oncall/v1;oncallv1";
+
+// ---------------------------------------------------------------------------
+// 共用列舉
+// ---------------------------------------------------------------------------
+
+// AlertStatus 對應 AlertManager payload 的 status 欄位
+enum AlertStatus {
+  ALERT_STATUS_UNSPECIFIED = 0;
+  ALERT_STATUS_FIRING = 1;
+  ALERT_STATUS_RESOLVED = 2;
+}
+
+// IncidentSeverity 正規化後的嚴重度（對映 AM severity label）
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_INFO = 1;
+  SEVERITY_WARNING = 2;
+  SEVERITY_CRITICAL = 3;
+}
+
+// ---------------------------------------------------------------------------
+// ReportIncident — gate → core：警報進入，觸發分診
+// ---------------------------------------------------------------------------
+
+message AlertEvent {
+  // alert fingerprint（AlertManager groupKey/fingerprint），冪等鍵組成部分（F17-B）
+  string fingerprint = 1;
+  AlertStatus status = 2;
+  Severity severity = 3;
+  // 標籤：cluster/service/alertname 等，聚合演算法（spec §3.1）的輸入
+  map<string, string> labels = 4;
+  map<string, string> annotations = 5;
+  // 事件時間（Unix 秒）
+  int64 starts_at_unix = 6;
+  string summary = 7;
+  string description = 8;
+  // generatorURL 指回 Prometheus/AM 原始警報頁
+  string generator_url = 9;
+}
+
+message ReportIncidentRequest {
+  AlertEvent event = 1;
+}
+
+// Ack：受理結果；deduplicated=true 表示冪等命中，直接回上次處理結果（F17-B）
+message ReportIncidentResponse {
+  bool accepted = 1;
+  bool deduplicated = 2;
+  string incident_id = 3;
+  string message = 4;
+}
+
+// ---------------------------------------------------------------------------
+// DeliverNotification — core → gate：請求 gate 代發 Telegram 訊息
+// ---------------------------------------------------------------------------
+
+message NotificationButton {
+  // callback_data 回傳時原樣帶回 ActionCallback.callback_id
+  string callback_id = 1;
+  string text = 2;
+}
+
+message Notification {
+  string incident_id = 1;
+  // Telegram chat id；空字串 = 預設值班頻道
+  string chat_id = 2;
+  string text = 3;
+  // MarkdownV2 / HTML；空字串 = 純文字
+  string parse_mode = 4;
+  repeated NotificationButton buttons = 5;
+}
+
+message DeliverNotificationRequest {
+  Notification notification = 1;
+}
+
+message DeliverNotificationResponse {
+  bool accepted = 1;
+  string message = 2;
+}
+
+// ---------------------------------------------------------------------------
+// ActionCallback — gate → core：使用者按下批准/拒絕按鈕
+// ---------------------------------------------------------------------------
+
+message CallbackAction {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_APPROVE = 1;
+    KIND_REJECT = 2;
+    KIND_SNOOZE = 3;
+  }
+  Kind kind = 1;
+  // 對應 NotificationButton.callback_id
+  string callback_id = 2;
+  // 拒絕時附帶的一句話原因（F9 強制捕獲）
+  string reason = 3;
+  string telegram_user_id = 4;
+}
+
+message ActionCallbackRequest {
+  CallbackAction action = 1;
+}
+
+message ActionCallbackResponse {
+  bool accepted = 1;
+  string message = 2;
+}
+
+// ---------------------------------------------------------------------------
+// CollectContext — core → gate：請求 gate 併發收集現場 context
+// ---------------------------------------------------------------------------
+
+message CollectContextRequest {
+  string incident_id = 1;
+  // 以警報標籤決定要拉哪些 series/log/deployment
+  map<string, string> labels = 2;
+  // 收集窗口（Unix 秒）；gate 依此查 Prometheus/Loki
+  int64 since_unix = 3;
+  int64 until_unix = 4;
+}
+
+// 單一指標時間序列
+message MetricSeries {
+  string query = 1;
+  map<string, string> labels = 2;
+  repeated Point points = 3;
+}
+
+message Point {
+  double timestamp_unix = 1;
+  double value = 2;
+}
+
+message DeploymentEvent {
+  string service = 1;
+  string revision = 2;
+  string deployer = 3;
+  int64 deployed_at_unix = 4;
+  string source = 5;
+}
+
+// HPA/autoscaler 活動軌跡（F2：量暴漲的關鍵訊號）
+message ScalingEvent {
+  string service = 1;
+  int32 replicas_from = 2;
+  int32 replicas_to = 3;
+  int64 at_unix = 4;
+  string reason = 5;
+}
+
+message LogSummary {
+  string query = 1;
+  int64 total_lines = 2;
+  // 取樣後的錯誤行摘要（已截斷，供 LLM 用）
+  repeated string sample_lines = 3;
+}
+
+message ContextBundle {
+  string incident_id = 1;
+  repeated MetricSeries metrics = 2;
+  repeated DeploymentEvent deployments = 3;
+  repeated ScalingEvent scaling_events = 4;
+  repeated LogSummary log_summaries = 5;
+  // context 降級模式（spec §2.2）：列出本次拉不到的來源與原因，
+  // 分診報告必須明列，禁止 LLM 幻覺補完
+  repeated string degraded_sources = 6;
+  int64 collected_at_unix = 7;
+}
+
+message CollectContextResponse {
+  ContextBundle bundle = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
+
+// 單一 gRPC service 同時被兩側實作：
+//   core 實作 ReportIncident / ActionCallback 的 server；
+//   gate 實作 DeliverNotification / CollectContext 的 server。
+service OncallService {
+  rpc ReportIncident(ReportIncidentRequest) returns (ReportIncidentResponse);
+  rpc DeliverNotification(DeliverNotificationRequest) returns (DeliverNotificationResponse);
+  rpc ActionCallback(ActionCallbackRequest) returns (ActionCallbackResponse);
+  rpc CollectContext(CollectContextRequest) returns (CollectContextResponse);
+}

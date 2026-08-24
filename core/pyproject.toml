@@ -1,0 +1,47 @@
+[project]
+name = "oncall-core"
+version = "0.1.0"
+description = "ai-oncall 智能層：incident 狀態機 / RAG / 分診 / runbook executor"
+requires-python = ">=3.11"
+dependencies = [
+    "grpcio>=1.70",
+    "protobuf>=5.29",
+    "structlog>=24.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.25",
+    "ruff>=0.9",
+    "pyright>=1.1.390",
+    "grpcio-tools>=1.70",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/oncall_core"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+extend-exclude = ["src/oncall_core/_proto"] # protoc 產物，不 lint
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+# RUF002/003：本專案刻意以 zh-TW 撰寫 docstring 與註解，全形標點非誤用
+ignore = ["RUF002", "RUF003"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.pyright]
+include = ["src", "tests"]
+exclude = ["src/oncall_core/_proto"]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
