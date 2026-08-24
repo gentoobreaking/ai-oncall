@@ -16,6 +16,7 @@ from oncall_core.brain.budget import BudgetExceeded, BudgetLedger
 from oncall_core.brain.providers.base import CompletionRequest
 from oncall_core.brain.providers.chain import ProviderChain
 from oncall_core.brain.schema_validator import TriageReport, extract_json_object, validate_report
+from oncall_core.incident.hashchain import HashChain
 from oncall_core.logging import get_logger
 from oncall_core.store import Store
 
@@ -220,7 +221,7 @@ class TriagePipeline:
             ],
             missing_context=list(report.missing_context),
         )
-        self._store.append_chained_event(
+        HashChain(self._store).append(
             input_.incident_id,
             "triage_completed",
             {"prompt_version": report.prompt_version, "repair_attempts": repair_attempts},
@@ -285,7 +286,7 @@ class TriagePipeline:
         timeline_kind: str = "schema_failure",
     ) -> PipelineOutcome:
         """降級路徑：純 context 摘要＋RAG 相似事故連結，token 預算照扣。"""
-        self._store.append_chained_event(
+        HashChain(self._store).append(
             input_.incident_id,
             timeline_kind,
             {"reason": reason, "repair_attempts": repair_attempts},
