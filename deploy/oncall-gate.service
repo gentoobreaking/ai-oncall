@@ -1,0 +1,21 @@
+[Unit]
+Description=oncall-gate — AI oncall pipeline sidecar (Go)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=oncall
+WorkingDirectory=/opt/oncall/gate
+EnvironmentFile=/opt/oncall/gate/gate.env
+ExecStart=/opt/oncall/gate/bin/gate
+Restart=on-failure
+RestartSec=5
+# 強化
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/oncall/gate
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

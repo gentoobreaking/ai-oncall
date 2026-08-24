@@ -1,0 +1,38 @@
+# docker-compose.yml —— core + ui（NAS/家裡，alpine base）
+# gate 建議以 systemd binary 部署於生產網段；如需容器版：
+#   docker build -f deploy/gate.Dockerfile -t oncall-gate .
+
+services:
+  core:
+    image: python:3.12-alpine
+    working_dir: /app
+    command: >
+      sh -c "apk add --no-cache uv &&
+             uv sync &&
+             uv run python -m oncall_core --db /data/oncall.db --addr 0.0.0.0:50051"
+    environment:
+      - SHADOW_MODE=1            # 上線門檻通過前必開
+    volumes:
+      - ./core:/app
+      - core-data:/data
+    ports:
+      - "127.0.0.1:50051:50051"  # 僅本機/wireguard 可達
+
+  ui:
+    image: python:3.12-alpine
+    working_dir: /app
+    command: >
+      sh -c "apk add --no-cache uv &&
+             uv sync &&
+             uv run python -m oncall_ui --host 0.0.0.0 --port 8091"
+    environment:
+      - READAPI_URL=http://core:8090
+    volumes:
+      - ./ui:/app
+    depends_on:
+      - core
+    ports:
+      - "127.0.0.1:8091:8091"    # 對外一律經反向代理認證
+
+volumes:
+  core-data:

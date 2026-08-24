@@ -1,0 +1,17 @@
+[Unit]
+Description=oncall-core — AI oncall intelligence daemon (Python)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=oncall
+WorkingDirectory=/opt/oncall/core
+EnvironmentFile=/opt/oncall/core/core.env
+ExecStart=/usr/local/bin/uv run python -m oncall_core --db /var/lib/oncall/oncall.db --addr 100.64.0.3:50051
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
