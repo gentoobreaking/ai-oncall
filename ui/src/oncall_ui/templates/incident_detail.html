@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ inc.id }} <span class="badge badge-{{ inc.status }}">{{ inc.status }}</span></h1>
+<p>{{ inc.title }}</p>
+
+<h2>Timeline</h2>
+<ul>
+{% for e in inc.timeline %}
+  <li><code>{{ e.created_at }}</code> {{ e.kind }} — {{ e.payload }}</li>
+{% else %}
+  <li>(無事件)</li>
+{% endfor %}
+</ul>
+
+<h2>Triage report</h2>
+{% if inc.prediction %}
+<ul>
+  {% for h in inc.prediction %}
+  <li>{{ h.cause }} (confidence={{ h.confidence }})</li>
+  {% endfor %}
+</ul>
+{% else %}<p>無分診紀錄</p>{% endif %}
+
+<h2>Action items</h2>
+<ul>
+{% for a in action_items %}
+  <li>[{{ a.status }}] {{ a.description }} (owner={{ a.owner }})</li>
+{% else %}
+  <li>(無)</li>
+{% endfor %}
+</ul>
+{% endblock %}

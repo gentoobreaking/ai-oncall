@@ -1,0 +1,45 @@
+[project]
+name = "oncall-ui"
+version = "0.1.0"
+description = "ai-oncall 唯讀 Web 服務：FastAPI + Jinja2 + htmx"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "jinja2>=3.1",
+    "uvicorn>=0.34",
+]
+
+[dependency-groups]
+dev = [
+    "oncall-core",
+    "pytest>=8",
+    "httpx>=0.28",
+    "ruff>=0.9",
+    "pyright>=1.1.390",
+]
+
+[tool.uv.sources]
+oncall-core = { path = "../core", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/oncall_ui"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"

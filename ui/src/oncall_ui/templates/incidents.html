@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Incidents（{{ total }}）</h1>
+<form method="get" action="/incidents">
+  <input type="text" name="q" placeholder="搜尋標題/ID" value="{{ q }}">
+  <select name="status">
+    <option value="">全部狀態</option>
+    {% for s in ["open", "investigating", "mitigated", "resolved"] %}
+    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">篩選</button>
+</form>
+<table>
+  <thead><tr><th>ID</th><th>標題</th><th>狀態</th><th>嚴重度</th></tr></thead>
+  <tbody>
+  {% for inc in items %}
+    <tr>
+      <td><a href="/incidents/{{ inc.id }}">{{ inc.id }}</a></td>
+      <td>{{ inc.title }}</td>
+      <td><span class="badge badge-{{ inc.status }}">{{ inc.status }}</span></td>
+      <td>{{ inc.severity }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">無資料</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Runbooks（{{ runbooks|length }}）</h1>
+<table>
+  <thead><tr><th>名稱</th><th>索引時間</th></tr></thead>
+  <tbody>
+  {% for rb in runbooks %}
+    <tr><td>{{ rb.ref_id }}</td><td>{{ rb.indexed_at }}</td></tr>
+  {% else %}
+    <tr><td colspan="2">無資料</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<h2>Stats</h2>
+<pre>{{ stats | tojson(indent=2) }}</pre>
+{% endblock %}
