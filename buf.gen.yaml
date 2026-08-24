@@ -1,0 +1,16 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/david/ai-oncall/gate/gen
+plugins:
+  # Go stubs → gate/gen/（使用 ~/go/bin 的本機 plugin）
+  - local: protoc-gen-go
+    out: gate/gen
+    opt: paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: gate/gen
+    opt:
+      - paths=source_relative
+      - require_unimplemented_servers=false
