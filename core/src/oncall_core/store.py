@@ -81,6 +81,20 @@ MIGRATIONS: list[tuple[str, str]] = [
         """,
     ),
     (
+        "0009_approval_requests",
+        """
+        CREATE TABLE IF NOT EXISTS approval_requests (
+            request_id   TEXT PRIMARY KEY,
+            incident_id  TEXT NOT NULL,
+            report_json  TEXT NOT NULL,
+            state        TEXT NOT NULL DEFAULT 'pending',
+            created_at   REAL NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_approval_state
+            ON approval_requests (state, created_at);
+        """,
+    ),
+    (
         "0008_shadow_scores",
         """
         CREATE TABLE IF NOT EXISTS shadow_scores (
@@ -737,6 +751,46 @@ class Store:
     def all_shadow_scores(self) -> list[sqlite3.Row]:
         with self._read() as conn:
             return list(conn.execute("SELECT * FROM shadow_scores"))
+
+    # ------------------------------------------------------------------
+    # pending approvals（T021 批准→執行編排）
+    # ------------------------------------------------------------------
+
+    def record_pending_approval(
+        self, *, request_id: str, incident_id: str, report_json: str
+    ) -> None:
+        with self._write() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO approval_requests"
+                " (request_id, incident_id, report_json, state, created_at)"
+                " VALUES (?, ?, ?, 'pending', ?)",
+                (request_id, incident_id, report_json, time.time()),
+            )
+
+    def get_pending_report(self, request_id: str) -> str | None:
+        """回傳待批准請求的 report JSON；非 pending 回 None。"""
+        with self._read() as conn:
+            row = conn.execute(
+                "SELECT report_json FROM approval_requests"
+                " WHERE request_id = ? AND state = 'pending'",
+                (request_id,),
+            ).fetchone()
+        return row["report_json"] if row else None
+
+    def mark_approval_done(self, request_id: str, state: str) -> None:
+        with self._write() as conn:
+            conn.execute(
+                "UPDATE approval_requests SET state = ? WHERE request_id = ?",
+                (state, request_id),
+            )
+
+    def list_pending_approvals(self) -> list[sqlite3.Row]:
+        with self._read() as conn:
+            return list(
+                conn.execute(
+                    "SELECT * FROM approval_requests WHERE state = 'pending' ORDER BY created_at"
+                )
+            )
 
     def close(self) -> None:
         self._conn.close()

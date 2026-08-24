@@ -319,10 +319,13 @@ def test_purge_expired_audits(store: Store, audit_dir: Path) -> None:
 def test_no_external_imports_of_executor() -> None:
     """§B.3-5 隔離鐵律的 CI 斷言。"""
     src_root = Path(__file__).resolve().parents[1] / "src" / "oncall_core"
+    # 組合根（daemon 進入點）是唯一被允許 import executor 的位置——
+    # 它負責把 ExecutorRunner 注入業務流程；其餘模組一律禁止。
+    allowed_importers = {"__main__.py"}
     violations: list[str] = []
     for py in src_root.rglob("*.py"):
         rel = py.relative_to(src_root)
-        if rel.parts[0] == "executor":
+        if rel.parts[0] == "executor" or rel.name in allowed_importers:
             continue
         content = py.read_text(encoding="utf-8")
         for line in content.splitlines():

@@ -7,6 +7,7 @@ DeliverNotification / CollectContext 邏輯上屬 gate——core 收到時
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from concurrent import futures
 
 import grpc
@@ -24,9 +25,16 @@ class OncallCoreServicer(oncall_pb2_grpc.OncallServiceServicer):
     pipeline 非 None 時，新 Incident 會觸發非同步分診（背景 thread）。
     """
 
-    def __init__(self, store: Store, run_triage=None) -> None:
+    def __init__(
+        self,
+        store: Store,
+        run_triage: Callable[[str], None] | None = None,
+        on_action: Callable[[str, str, str, str], None] | None = None,
+    ) -> None:
+        """on_action(callback_id, kind, reason, user)：批准閘門 callback 路由。"""
         self._store = store
         self._run_triage = run_triage
+        self._on_action = on_action
 
     # ------------------------------------------------------------------
     # gate → core
@@ -81,8 +89,20 @@ class OncallCoreServicer(oncall_pb2_grpc.OncallServiceServicer):
         if action is None or not action.callback_id:
             return oncall_pb2.ActionCallbackResponse(accepted=False, message="missing action")
 
-        # 找到 callback 對應的 incident：骨架期以 callback_id 直接對映失敗，
-        # 完整對映表由 interact（T012）維護；先記時間線不丟事件。
+        # T021 接線：callback 路由至批准閘門編排器
+        if self._on_action is not None:
+            kind_name = (
+                oncall_pb2.CallbackAction.Kind.Name(action.kind).removeprefix("KIND_").lower()
+            )
+            self._on_action(
+                action.callback_id,
+                kind_name,
+                action.reason,
+                action.telegram_user_id,
+            )
+            return oncall_pb2.ActionCallbackResponse(accepted=True)
+
+        # 無編排器：記時間線不丟事件
         incidents = self._store.list_incidents(limit=1)
         incident_id = incidents[0].id if incidents else ""
         if incident_id:
