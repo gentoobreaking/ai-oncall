@@ -13,7 +13,7 @@ services:
     environment:
       - SHADOW_MODE=1            # 上線門檻通過前必開
     volumes:
-      - ./core:/app
+      - ../core:/app
       - core-data:/data
     ports:
       - "127.0.0.1:50051:50051"  # 僅本機/wireguard 可達
@@ -23,12 +23,13 @@ services:
     working_dir: /app
     command: >
       sh -c "apk add --no-cache uv &&
-             uv sync &&
+             uv sync --no-dev &&
              uv run python -m oncall_ui --host 0.0.0.0 --port 8091"
     environment:
       - READAPI_URL=http://core:8090
     volumes:
-      - ./ui:/app
+      - ../ui:/app
+      - ../core:/core
     depends_on:
       - core
     ports:
