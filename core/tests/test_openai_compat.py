@@ -20,9 +20,12 @@ from oncall_core.brain.providers import (
 class FakeOpenAIServer:
     """假 /chat/completions 端點：記錄請求、回應可控。"""
 
-    def __init__(self, status: int = 200, body: dict | None = None):
+    def __init__(self, status: int = 200, body: dict | None = None, dynamic_report: bool = False):
+        import re
+
         self.requests: list[dict] = []
         self.status = status
+        self.dynamic_report = dynamic_report
         self.body = (
             body
             if body is not None
@@ -37,13 +40,39 @@ class FakeOpenAIServer:
         class H(BaseHTTPRequestHandler):
             def do_POST(self):
                 length = int(self.headers.get("Content-Length", 0))
+                req_body = json.loads(self.rfile.read(length))
                 outer.requests.append(
                     {
                         "auth": self.headers.get("Authorization"),
-                        "body": json.loads(self.rfile.read(length)),
+                        "body": req_body,
                     }
                 )
-                payload = json.dumps(outer.body).encode()
+                if outer.dynamic_report:
+                    # 從 prompt 抽 Incident ID，回傳符合分診 schema 的合法報告
+                    msgs = req_body.get("messages", [])
+                    text = " ".join(m.get("content", "") for m in msgs)
+                    m = re.search(r"Incident: (\S+)", text)
+                    incident_id = m.group(1) if m else "unknown"
+                    content = json.dumps(
+                        {
+                            "incident_id": incident_id,
+                            "hypotheses": [
+                                {"cause": "e2e root cause", "confidence": 0.9, "evidence": ["ctx"]}
+                            ],
+                            "suggested_actions": [
+                                {"action": "investigate logs", "risk": "read-only"}
+                            ],
+                            "missing_context": [],
+                            "prompt_version": "9.9.9",
+                        }
+                    )
+                    payload_body = {
+                        "choices": [{"message": {"content": content}}],
+                        "usage": {"total_tokens": 100},
+                    }
+                else:
+                    payload_body = outer.body
+                payload = json.dumps(payload_body).encode()
                 self.send_response(outer.status)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(payload)))

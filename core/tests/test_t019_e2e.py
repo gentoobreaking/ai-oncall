@@ -618,6 +618,15 @@ def test_cross_process_grpc_contract(tmp_path: Path) -> None:
     gate_port = _free_port()
     db_path = tmp_path / "e2e.db"
 
+    # 接線驗證：LLM_PROVIDERS 指向假 LLM 端點，
+    # 若 servicer→pipeline 接線斷裂，此 server 不會收到任何請求
+    from test_openai_compat import FakeOpenAIServer
+
+    llm = FakeOpenAIServer(dynamic_report=True)
+
+    core_env = dict(os.environ)
+    core_env["LLM_PROVIDERS"] = f"e2e-llm|{llm.url}|test-model|key"
+
     core_proc = subprocess.Popen(
         [
             sys.executable,
@@ -629,8 +638,9 @@ def test_cross_process_grpc_contract(tmp_path: Path) -> None:
             f"127.0.0.1:{core_port}",
         ],
         cwd=REPO_ROOT / "core",
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        env=core_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
     )
     env = dict(
         os.environ,
@@ -686,6 +696,22 @@ def test_cross_process_grpc_contract(tmp_path: Path) -> None:
 
         # 驗證資料真的寫進 core 的 SQLite
         time.sleep(0.3)
+        # 接線斷言：分診必須真的被觸發（predictions 入庫＋LLM 端點收到請求）
+        deadline = time.time() + 10
+        pred_row = None
+        while time.time() < deadline:
+            conn = sqlite3.connect(db_path)
+            pred_row = conn.execute(
+                "SELECT prompt_version FROM predictions WHERE incident_id = ?",
+                (incident_id,),
+            ).fetchone()
+            conn.close()
+            if pred_row is not None:
+                break
+            time.sleep(0.2)
+        assert pred_row is not None, "ReportIncident 未觸發分診管線——servicer→pipeline 接線斷裂"
+        assert llm.requests, "LLM 假端點未收到任何請求——接線或 provider 設定斷裂"
+
         conn = sqlite3.connect(db_path)
         row = conn.execute(
             "SELECT fingerprint FROM incidents WHERE id = ?", (incident_id,)
@@ -697,6 +723,8 @@ def test_cross_process_grpc_contract(tmp_path: Path) -> None:
         core_proc.terminate()
         gate_proc.wait(timeout=10)
         core_proc.wait(timeout=10)
+        out = core_proc.stdout.read().decode() if core_proc.stdout else ""
+        print("=== CORE LOG ===\n", out[-2000:])
 
 
 def _wait_port(port: int, timeout: float = 20.0) -> None:
