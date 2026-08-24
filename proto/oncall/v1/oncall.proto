@@ -112,6 +112,8 @@ message CallbackAction {
   // 拒絕時附帶的一句話原因（F9 強制捕獲）
   string reason = 3;
   string telegram_user_id = 4;
+  // 批准閘門請求 ID（callback_data 內編碼：approve:{request_id}）
+  string request_id = 5;
 }
 
 message ActionCallbackRequest {

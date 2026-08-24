@@ -102,6 +102,7 @@ func (r *Router) FetchOnce(ctx context.Context) error {
 				CallbackId:     u.CallbackQuery.ID,
 				Kind:           parseKind(u.CallbackQuery.Data),
 				Reason:         parseReason(u.CallbackQuery.Data),
+				RequestId:      parseRequestID(u.CallbackQuery.Data),
 				TelegramUserId: fmt.Sprintf("%d", u.CallbackQuery.From.ID),
 			},
 		}
@@ -196,6 +197,25 @@ func parseReason(data string) string {
 		if data[i] == ':' {
 			return data[i+1:]
 		}
+	}
+	return ""
+}
+
+// parseRequestID 取 verb: 之後、下一個冒號前的 request_id。
+// data 格式："approve:{request_id}" / "reject:{request_id}:{reason}"
+func parseRequestID(data string) string {
+	first := -1
+	for i := 0; i < len(data); i++ {
+		if data[i] == ':' {
+			if first == -1 {
+				first = i
+			} else {
+				return data[first+1 : i]
+			}
+		}
+	}
+	if first != -1 && first+1 < len(data) {
+		return data[first+1:]
 	}
 	return ""
 }

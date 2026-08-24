@@ -244,3 +244,9 @@ func TestFetchOnce_ParsesUpdateJSON(t *testing.T) {
 	}
 	assert.EqualValues(t, 8, r.offset, "offset 應推進到 update_id+1")
 }
+
+func TestParseRequestID(t *testing.T) {
+	assert.Equal(t, "req-1", parseRequestID("approve:req-1"))
+	assert.Equal(t, "req-1", parseRequestID("reject:req-1:誤報"))
+	assert.Empty(t, parseRequestID("approve"))
+}

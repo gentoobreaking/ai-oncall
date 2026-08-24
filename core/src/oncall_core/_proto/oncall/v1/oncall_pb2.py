@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16oncall/v1/oncall.proto\x12\toncall.v1\"\x98\x03\n\nAlertEvent\x12\x13\n\x0b\x66ingerprint\x18\x01 \x01(\t\x12&\n\x06status\x18\x02 \x01(\x0e\x32\x16.oncall.v1.AlertStatus\x12%\n\x08severity\x18\x03 \x01(\x0e\x32\x13.oncall.v1.Severity\x12\x31\n\x06labels\x18\x04 \x03(\x0b\x32!.oncall.v1.AlertEvent.LabelsEntry\x12;\n\x0b\x61nnotations\x18\x05 \x03(\x0b\x32&.oncall.v1.AlertEvent.AnnotationsEntry\x12\x16\n\x0estarts_at_unix\x18\x06 \x01(\x03\x12\x0f\n\x07summary\x18\x07 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x08 \x01(\t\x12\x15\n\rgenerator_url\x18\t \x01(\t\x1a-\n\x0bLabelsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1a\x32\n\x10\x41nnotationsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"=\n\x15ReportIncidentRequest\x12$\n\x05\x65vent\x18\x01 \x01(\x0b\x32\x15.oncall.v1.AlertEvent\"f\n\x16ReportIncidentResponse\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08\x12\x14\n\x0c\x64\x65\x64uplicated\x18\x02 \x01(\x08\x12\x13\n\x0bincident_id\x18\x03 \x01(\t\x12\x0f\n\x07message\x18\x04 \x01(\t\"7\n\x12NotificationButton\x12\x13\n\x0b\x63\x61llback_id\x18\x01 \x01(\t\x12\x0c\n\x04text\x18\x02 \x01(\t\"\x86\x01\n\x0cNotification\x12\x13\n\x0bincident_id\x18\x01 \x01(\t\x12\x0f\n\x07\x63hat_id\x18\x02 \x01(\t\x12\x0c\n\x04text\x18\x03 \x01(\t\x12\x12\n\nparse_mode\x18\x04 \x01(\t\x12.\n\x07\x62uttons\x18\x05 \x03(\x0b\x32\x1d.oncall.v1.NotificationButton\"K\n\x1a\x44\x65liverNotificationRequest\x12-\n\x0cnotification\x18\x01 \x01(\x0b\x32\x17.oncall.v1.Notification\"@\n\x1b\x44\x65liverNotificationResponse\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\xcf\x01\n\x0e\x43\x61llbackAction\x12,\n\x04kind\x18\x01 \x01(\x0e\x32\x1e.oncall.v1.CallbackAction.Kind\x12\x13\n\x0b\x63\x61llback_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\x12\x18\n\x10telegram_user_id\x18\x04 \x01(\t\"P\n\x04Kind\x12\x14\n\x10KIND_UNSPECIFIED\x10\x00\x12\x10\n\x0cKIND_APPROVE\x10\x01\x12\x0f\n\x0bKIND_REJECT\x10\x02\x12\x0f\n\x0bKIND_SNOOZE\x10\x03\"B\n\x15\x41\x63tionCallbackRequest\x12)\n\x06\x61\x63tion\x18\x01 \x01(\x0b\x32\x19.oncall.v1.CallbackAction\";\n\x16\x41\x63tionCallbackResponse\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\xc1\x01\n\x15\x43ollectContextRequest\x12\x13\n\x0bincident_id\x18\x01 \x01(\t\x12<\n\x06labels\x18\x02 \x03(\x0b\x32,.oncall.v1.CollectContextRequest.LabelsEntry\x12\x12\n\nsince_unix\x18\x03 \x01(\x03\x12\x12\n\nuntil_unix\x18\x04 \x01(\x03\x1a-\n\x0bLabelsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\xa3\x01\n\x0cMetricSeries\x12\r\n\x05query\x18\x01 \x01(\t\x12\x33\n\x06labels\x18\x02 \x03(\x0b\x32#.oncall.v1.MetricSeries.LabelsEntry\x12 \n\x06points\x18\x03 \x03(\x0b\x32\x10.oncall.v1.Point\x1a-\n\x0bLabelsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\".\n\x05Point\x12\x16\n\x0etimestamp_unix\x18\x01 \x01(\x01\x12\r\n\x05value\x18\x02 \x01(\x01\"p\n\x0f\x44\x65ploymentEvent\x12\x0f\n\x07service\x18\x01 \x01(\t\x12\x10\n\x08revision\x18\x02 \x01(\t\x12\x10\n\x08\x64\x65ployer\x18\x03 \x01(\t\x12\x18\n\x10\x64\x65ployed_at_unix\x18\x04 \x01(\x03\x12\x0e\n\x06source\x18\x05 \x01(\t\"l\n\x0cScalingEvent\x12\x0f\n\x07service\x18\x01 \x01(\t\x12\x15\n\rreplicas_from\x18\x02 \x01(\x05\x12\x13\n\x0breplicas_to\x18\x03 \x01(\x05\x12\x0f\n\x07\x61t_unix\x18\x04 \x01(\x03\x12\x0e\n\x06reason\x18\x05 \x01(\t\"F\n\nLogSummary\x12\r\n\x05query\x18\x01 \x01(\t\x12\x13\n\x0btotal_lines\x18\x02 \x01(\x03\x12\x14\n\x0csample_lines\x18\x03 \x03(\t\"\x93\x02\n\rContextBundle\x12\x13\n\x0bincident_id\x18\x01 \x01(\t\x12(\n\x07metrics\x18\x02 \x03(\x0b\x32\x17.oncall.v1.MetricSeries\x12/\n\x0b\x64\x65ployments\x18\x03 \x03(\x0b\x32\x1a.oncall.v1.DeploymentEvent\x12/\n\x0escaling_events\x18\x04 \x03(\x0b\x32\x17.oncall.v1.ScalingEvent\x12,\n\rlog_summaries\x18\x05 \x03(\x0b\x32\x15.oncall.v1.LogSummary\x12\x18\n\x10\x64\x65graded_sources\x18\x06 \x03(\t\x12\x19\n\x11\x63ollected_at_unix\x18\x07 \x01(\x03\"B\n\x16\x43ollectContextResponse\x12(\n\x06\x62undle\x18\x01 \x01(\x0b\x32\x18.oncall.v1.ContextBundle*_\n\x0b\x41lertStatus\x12\x1c\n\x18\x41LERT_STATUS_UNSPECIFIED\x10\x00\x12\x17\n\x13\x41LERT_STATUS_FIRING\x10\x01\x12\x19\n\x15\x41LERT_STATUS_RESOLVED\x10\x02*d\n\x08Severity\x12\x18\n\x14SEVERITY_UNSPECIFIED\x10\x00\x12\x11\n\rSEVERITY_INFO\x10\x01\x12\x14\n\x10SEVERITY_WARNING\x10\x02\x12\x15\n\x11SEVERITY_CRITICAL\x10\x03\x32\xfa\x02\n\rOncallService\x12U\n\x0eReportIncident\x12 .oncall.v1.ReportIncidentRequest\x1a!.oncall.v1.ReportIncidentResponse\x12\x64\n\x13\x44\x65liverNotification\x12%.oncall.v1.DeliverNotificationRequest\x1a&.oncall.v1.DeliverNotificationResponse\x12U\n\x0e\x41\x63tionCallback\x12 .oncall.v1.ActionCallbackRequest\x1a!.oncall.v1.ActionCallbackResponse\x12U\n\x0e\x43ollectContext\x12 .oncall.v1.CollectContextRequest\x1a!.oncall.v1.CollectContextResponseB8Z6github.com/david/ai-oncall/gate/gen/oncall/v1;oncallv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x16oncall/v1/oncall.proto\x12\toncall.v1\"\x98\x03\n\nAlertEvent\x12\x13\n\x0b\x66ingerprint\x18\x01 \x01(\t\x12&\n\x06status\x18\x02 \x01(\x0e\x32\x16.oncall.v1.AlertStatus\x12%\n\x08severity\x18\x03 \x01(\x0e\x32\x13.oncall.v1.Severity\x12\x31\n\x06labels\x18\x04 \x03(\x0b\x32!.oncall.v1.AlertEvent.LabelsEntry\x12;\n\x0b\x61nnotations\x18\x05 \x03(\x0b\x32&.oncall.v1.AlertEvent.AnnotationsEntry\x12\x16\n\x0estarts_at_unix\x18\x06 \x01(\x03\x12\x0f\n\x07summary\x18\x07 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x08 \x01(\t\x12\x15\n\rgenerator_url\x18\t \x01(\t\x1a-\n\x0bLabelsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x1a\x32\n\x10\x41nnotationsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"=\n\x15ReportIncidentRequest\x12$\n\x05\x65vent\x18\x01 \x01(\x0b\x32\x15.oncall.v1.AlertEvent\"f\n\x16ReportIncidentResponse\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08\x12\x14\n\x0c\x64\x65\x64uplicated\x18\x02 \x01(\x08\x12\x13\n\x0bincident_id\x18\x03 \x01(\t\x12\x0f\n\x07message\x18\x04 \x01(\t\"7\n\x12NotificationButton\x12\x13\n\x0b\x63\x61llback_id\x18\x01 \x01(\t\x12\x0c\n\x04text\x18\x02 \x01(\t\"\x86\x01\n\x0cNotification\x12\x13\n\x0bincident_id\x18\x01 \x01(\t\x12\x0f\n\x07\x63hat_id\x18\x02 \x01(\t\x12\x0c\n\x04text\x18\x03 \x01(\t\x12\x12\n\nparse_mode\x18\x04 \x01(\t\x12.\n\x07\x62uttons\x18\x05 \x03(\x0b\x32\x1d.oncall.v1.NotificationButton\"K\n\x1a\x44\x65liverNotificationRequest\x12-\n\x0cnotification\x18\x01 \x01(\x0b\x32\x17.oncall.v1.Notification\"@\n\x1b\x44\x65liverNotificationResponse\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\xe3\x01\n\x0e\x43\x61llbackAction\x12,\n\x04kind\x18\x01 \x01(\x0e\x32\x1e.oncall.v1.CallbackAction.Kind\x12\x13\n\x0b\x63\x61llback_id\x18\x02 \x01(\t\x12\x0e\n\x06reason\x18\x03 \x01(\t\x12\x18\n\x10telegram_user_id\x18\x04 \x01(\t\x12\x12\n\nrequest_id\x18\x05 \x01(\t\"P\n\x04Kind\x12\x14\n\x10KIND_UNSPECIFIED\x10\x00\x12\x10\n\x0cKIND_APPROVE\x10\x01\x12\x0f\n\x0bKIND_REJECT\x10\x02\x12\x0f\n\x0bKIND_SNOOZE\x10\x03\"B\n\x15\x41\x63tionCallbackRequest\x12)\n\x06\x61\x63tion\x18\x01 \x01(\x0b\x32\x19.oncall.v1.CallbackAction\";\n\x16\x41\x63tionCallbackResponse\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"\xc1\x01\n\x15\x43ollectContextRequest\x12\x13\n\x0bincident_id\x18\x01 \x01(\t\x12<\n\x06labels\x18\x02 \x03(\x0b\x32,.oncall.v1.CollectContextRequest.LabelsEntry\x12\x12\n\nsince_unix\x18\x03 \x01(\x03\x12\x12\n\nuntil_unix\x18\x04 \x01(\x03\x1a-\n\x0bLabelsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\xa3\x01\n\x0cMetricSeries\x12\r\n\x05query\x18\x01 \x01(\t\x12\x33\n\x06labels\x18\x02 \x03(\x0b\x32#.oncall.v1.MetricSeries.LabelsEntry\x12 \n\x06points\x18\x03 \x03(\x0b\x32\x10.oncall.v1.Point\x1a-\n\x0bLabelsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\".\n\x05Point\x12\x16\n\x0etimestamp_unix\x18\x01 \x01(\x01\x12\r\n\x05value\x18\x02 \x01(\x01\"p\n\x0f\x44\x65ploymentEvent\x12\x0f\n\x07service\x18\x01 \x01(\t\x12\x10\n\x08revision\x18\x02 \x01(\t\x12\x10\n\x08\x64\x65ployer\x18\x03 \x01(\t\x12\x18\n\x10\x64\x65ployed_at_unix\x18\x04 \x01(\x03\x12\x0e\n\x06source\x18\x05 \x01(\t\"l\n\x0cScalingEvent\x12\x0f\n\x07service\x18\x01 \x01(\t\x12\x15\n\rreplicas_from\x18\x02 \x01(\x05\x12\x13\n\x0breplicas_to\x18\x03 \x01(\x05\x12\x0f\n\x07\x61t_unix\x18\x04 \x01(\x03\x12\x0e\n\x06reason\x18\x05 \x01(\t\"F\n\nLogSummary\x12\r\n\x05query\x18\x01 \x01(\t\x12\x13\n\x0btotal_lines\x18\x02 \x01(\x03\x12\x14\n\x0csample_lines\x18\x03 \x03(\t\"\x93\x02\n\rContextBundle\x12\x13\n\x0bincident_id\x18\x01 \x01(\t\x12(\n\x07metrics\x18\x02 \x03(\x0b\x32\x17.oncall.v1.MetricSeries\x12/\n\x0b\x64\x65ployments\x18\x03 \x03(\x0b\x32\x1a.oncall.v1.DeploymentEvent\x12/\n\x0escaling_events\x18\x04 \x03(\x0b\x32\x17.oncall.v1.ScalingEvent\x12,\n\rlog_summaries\x18\x05 \x03(\x0b\x32\x15.oncall.v1.LogSummary\x12\x18\n\x10\x64\x65graded_sources\x18\x06 \x03(\t\x12\x19\n\x11\x63ollected_at_unix\x18\x07 \x01(\x03\"B\n\x16\x43ollectContextResponse\x12(\n\x06\x62undle\x18\x01 \x01(\x0b\x32\x18.oncall.v1.ContextBundle*_\n\x0b\x41lertStatus\x12\x1c\n\x18\x41LERT_STATUS_UNSPECIFIED\x10\x00\x12\x17\n\x13\x41LERT_STATUS_FIRING\x10\x01\x12\x19\n\x15\x41LERT_STATUS_RESOLVED\x10\x02*d\n\x08Severity\x12\x18\n\x14SEVERITY_UNSPECIFIED\x10\x00\x12\x11\n\rSEVERITY_INFO\x10\x01\x12\x14\n\x10SEVERITY_WARNING\x10\x02\x12\x15\n\x11SEVERITY_CRITICAL\x10\x03\x32\xfa\x02\n\rOncallService\x12U\n\x0eReportIncident\x12 .oncall.v1.ReportIncidentRequest\x1a!.oncall.v1.ReportIncidentResponse\x12\x64\n\x13\x44\x65liverNotification\x12%.oncall.v1.DeliverNotificationRequest\x1a&.oncall.v1.DeliverNotificationResponse\x12U\n\x0e\x41\x63tionCallback\x12 .oncall.v1.ActionCallbackRequest\x1a!.oncall.v1.ActionCallbackResponse\x12U\n\x0e\x43ollectContext\x12 .oncall.v1.CollectContextRequest\x1a!.oncall.v1.CollectContextResponseB8Z6github.com/david/ai-oncall/gate/gen/oncall/v1;oncallv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -40,10 +40,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_COLLECTCONTEXTREQUEST_LABELSENTRY']._serialized_options = b'8\001'
   _globals['_METRICSERIES_LABELSENTRY']._loaded_options = None
   _globals['_METRICSERIES_LABELSENTRY']._serialized_options = b'8\001'
-  _globals['_ALERTSTATUS']._serialized_start=2343
-  _globals['_ALERTSTATUS']._serialized_end=2438
-  _globals['_SEVERITY']._serialized_start=2440
-  _globals['_SEVERITY']._serialized_end=2540
+  _globals['_ALERTSTATUS']._serialized_start=2363
+  _globals['_ALERTSTATUS']._serialized_end=2458
+  _globals['_SEVERITY']._serialized_start=2460
+  _globals['_SEVERITY']._serialized_end=2560
   _globals['_ALERTEVENT']._serialized_start=38
   _globals['_ALERTEVENT']._serialized_end=446
   _globals['_ALERTEVENT_LABELSENTRY']._serialized_start=349
@@ -63,33 +63,33 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_DELIVERNOTIFICATIONRESPONSE']._serialized_start=886
   _globals['_DELIVERNOTIFICATIONRESPONSE']._serialized_end=950
   _globals['_CALLBACKACTION']._serialized_start=953
-  _globals['_CALLBACKACTION']._serialized_end=1160
-  _globals['_CALLBACKACTION_KIND']._serialized_start=1080
-  _globals['_CALLBACKACTION_KIND']._serialized_end=1160
-  _globals['_ACTIONCALLBACKREQUEST']._serialized_start=1162
-  _globals['_ACTIONCALLBACKREQUEST']._serialized_end=1228
-  _globals['_ACTIONCALLBACKRESPONSE']._serialized_start=1230
-  _globals['_ACTIONCALLBACKRESPONSE']._serialized_end=1289
-  _globals['_COLLECTCONTEXTREQUEST']._serialized_start=1292
-  _globals['_COLLECTCONTEXTREQUEST']._serialized_end=1485
+  _globals['_CALLBACKACTION']._serialized_end=1180
+  _globals['_CALLBACKACTION_KIND']._serialized_start=1100
+  _globals['_CALLBACKACTION_KIND']._serialized_end=1180
+  _globals['_ACTIONCALLBACKREQUEST']._serialized_start=1182
+  _globals['_ACTIONCALLBACKREQUEST']._serialized_end=1248
+  _globals['_ACTIONCALLBACKRESPONSE']._serialized_start=1250
+  _globals['_ACTIONCALLBACKRESPONSE']._serialized_end=1309
+  _globals['_COLLECTCONTEXTREQUEST']._serialized_start=1312
+  _globals['_COLLECTCONTEXTREQUEST']._serialized_end=1505
   _globals['_COLLECTCONTEXTREQUEST_LABELSENTRY']._serialized_start=349
   _globals['_COLLECTCONTEXTREQUEST_LABELSENTRY']._serialized_end=394
-  _globals['_METRICSERIES']._serialized_start=1488
-  _globals['_METRICSERIES']._serialized_end=1651
+  _globals['_METRICSERIES']._serialized_start=1508
+  _globals['_METRICSERIES']._serialized_end=1671
   _globals['_METRICSERIES_LABELSENTRY']._serialized_start=349
   _globals['_METRICSERIES_LABELSENTRY']._serialized_end=394
-  _globals['_POINT']._serialized_start=1653
-  _globals['_POINT']._serialized_end=1699
-  _globals['_DEPLOYMENTEVENT']._serialized_start=1701
-  _globals['_DEPLOYMENTEVENT']._serialized_end=1813
-  _globals['_SCALINGEVENT']._serialized_start=1815
-  _globals['_SCALINGEVENT']._serialized_end=1923
-  _globals['_LOGSUMMARY']._serialized_start=1925
-  _globals['_LOGSUMMARY']._serialized_end=1995
-  _globals['_CONTEXTBUNDLE']._serialized_start=1998
-  _globals['_CONTEXTBUNDLE']._serialized_end=2273
-  _globals['_COLLECTCONTEXTRESPONSE']._serialized_start=2275
-  _globals['_COLLECTCONTEXTRESPONSE']._serialized_end=2341
-  _globals['_ONCALLSERVICE']._serialized_start=2543
-  _globals['_ONCALLSERVICE']._serialized_end=2921
+  _globals['_POINT']._serialized_start=1673
+  _globals['_POINT']._serialized_end=1719
+  _globals['_DEPLOYMENTEVENT']._serialized_start=1721
+  _globals['_DEPLOYMENTEVENT']._serialized_end=1833
+  _globals['_SCALINGEVENT']._serialized_start=1835
+  _globals['_SCALINGEVENT']._serialized_end=1943
+  _globals['_LOGSUMMARY']._serialized_start=1945
+  _globals['_LOGSUMMARY']._serialized_end=2015
+  _globals['_CONTEXTBUNDLE']._serialized_start=2018
+  _globals['_CONTEXTBUNDLE']._serialized_end=2293
+  _globals['_COLLECTCONTEXTRESPONSE']._serialized_start=2295
+  _globals['_COLLECTCONTEXTRESPONSE']._serialized_end=2361
+  _globals['_ONCALLSERVICE']._serialized_start=2563
+  _globals['_ONCALLSERVICE']._serialized_end=2941
 # @@protoc_insertion_point(module_scope)

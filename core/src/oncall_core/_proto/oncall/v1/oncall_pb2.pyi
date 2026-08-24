@@ -118,7 +118,7 @@ class DeliverNotificationResponse(_message.Message):
     def __init__(self, accepted: _Optional[bool] = ..., message: _Optional[str] = ...) -> None: ...
 
 class CallbackAction(_message.Message):
-    __slots__ = ("kind", "callback_id", "reason", "telegram_user_id")
+    __slots__ = ("kind", "callback_id", "reason", "telegram_user_id", "request_id")
     class Kind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         KIND_UNSPECIFIED: _ClassVar[CallbackAction.Kind]
@@ -133,11 +133,13 @@ class CallbackAction(_message.Message):
     CALLBACK_ID_FIELD_NUMBER: _ClassVar[int]
     REASON_FIELD_NUMBER: _ClassVar[int]
     TELEGRAM_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    REQUEST_ID_FIELD_NUMBER: _ClassVar[int]
     kind: CallbackAction.Kind
     callback_id: str
     reason: str
     telegram_user_id: str
-    def __init__(self, kind: _Optional[_Union[CallbackAction.Kind, str]] = ..., callback_id: _Optional[str] = ..., reason: _Optional[str] = ..., telegram_user_id: _Optional[str] = ...) -> None: ...
+    request_id: str
+    def __init__(self, kind: _Optional[_Union[CallbackAction.Kind, str]] = ..., callback_id: _Optional[str] = ..., reason: _Optional[str] = ..., telegram_user_id: _Optional[str] = ..., request_id: _Optional[str] = ...) -> None: ...
 
 class ActionCallbackRequest(_message.Message):
     __slots__ = ("action",)
