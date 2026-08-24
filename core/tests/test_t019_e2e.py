@@ -661,7 +661,7 @@ def test_cross_process_grpc_contract(tmp_path: Path) -> None:
                 ]
             }
         )
-    
+
         code: int | None = None
         payload: dict | None = None
         for attempt in range(10):  # gate 對 core 連線可能需要重試視窗

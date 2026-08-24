@@ -17,8 +17,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="oncall-core")
     parser.add_argument("--db", default="data/oncall.db", help="SQLite 路徑")
     parser.add_argument("--addr", default="127.0.0.1:50051", help="gRPC 監聽位址")
-    parser.add_argument("--readapi-addr", default="127.0.0.1:8090",
-                        help="唯讀 HTTP API 監聽位址（ui 資料源）")
+    parser.add_argument(
+        "--readapi-addr", default="127.0.0.1:8090", help="唯讀 HTTP API 監聽位址 ui 資料源"
+    )
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args(argv)
 
@@ -31,8 +32,7 @@ def main(argv: list[str] | None = None) -> int:
     host, _, port = args.readapi_addr.rpartition(":")
     readapi = ReadApiServer(store, host=host or "127.0.0.1", port=int(port))
     readapi.start_background()
-    log.info("oncall-core started", addr=args.addr,
-             readapi=readapi.url, db=args.db)
+    log.info("oncall-core started", addr=args.addr, readapi=readapi.url, db=args.db)
 
     stop = threading.Event()
     signal.signal(signal.SIGTERM, lambda *_: stop.set())
