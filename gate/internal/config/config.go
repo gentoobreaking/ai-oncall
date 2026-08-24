@@ -33,6 +33,9 @@ type Config struct {
 	CollectTimeout time.Duration
 	// TelegramBotToken Telegram Bot API token（tgtransport 用）；空字串 = 推播停用
 	TelegramBotToken string
+	// ClusterPromURLs 依 alert 的 cluster label 分流的 Prometheus 端點
+	// （T022：name→baseURL）；查無此叢集時退回 PrometheusURL
+	ClusterPromURLs map[string]string
 }
 
 // 預設值。ListenAddr 預設只聽 loopback；生產環境再明確放行。
@@ -59,6 +62,7 @@ var EnvKeys = []string{
 	"DEPLOYMENTS_PATH",
 	"COLLECT_TIMEOUT",
 	"TELEGRAM_BOT_TOKEN",
+	"PROMETHEUS_CLUSTERS",
 }
 
 // Load 自環境變數載入設定並驗證必填欄位。
@@ -94,6 +98,13 @@ func Load() (Config, error) {
 	if v := get("TELEGRAM_BOT_TOKEN"); v != "" {
 		cfg.TelegramBotToken = v
 	}
+	if v := get("PROMETHEUS_CLUSTERS"); v != "" {
+		m, err := ParseClusterPromURLs(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("PROMETHEUS_CLUSTERS 無法解析 %q: %w", v, err)
+		}
+		cfg.ClusterPromURLs = m
+	}
 	if v := get("COLLECT_TIMEOUT"); v != "" {
 		d, err := time.ParseDuration(v)
 		if err != nil {
@@ -109,6 +120,27 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	return cfg, nil
+}
+
+// ParseClusterPromURLs 解析 PROMETHEUS_CLUSTERS：格式 name=url[,name=url…]。
+// 條目缺 "=" 或 url 空即回傳錯誤（啟動即擋，寧可不分流也不默默抓錯現場）。
+func ParseClusterPromURLs(s string) (map[string]string, error) {
+	out := map[string]string{}
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 || strings.TrimSpace(kv[0]) == "" || strings.TrimSpace(kv[1]) == "" {
+			return nil, fmt.Errorf("條目 %q 需為 name=url 格式", part)
+		}
+		out[strings.TrimSpace(kv[0])] = strings.TrimRight(strings.TrimSpace(kv[1]), "/")
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("無有效條目")
+	}
+	return out, nil
 }
 
 // Validate 檢查必填欄位與格式。

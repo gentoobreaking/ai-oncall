@@ -15,7 +15,8 @@ go build ./cmd/gate
 | SHARED_SECRET | ✅ | — | webhook Bearer token（F17-A） |
 | CORE_ADDR | ✅ | — | core gRPC 位址 |
 | LISTEN_ADDR | | 127.0.0.1:8080 | webhook HTTP 監聽 |
-| PROMETHEUS_URL | | http://127.0.0.1:9090 | |
+| PROMETHEUS_URL | | http://127.0.0.1:9090 | 預設端點 |
+| PROMETHEUS_CLUSTERS | | （停用） | 多叢集分流 name=url[,…]（T022） |
 | LOKI_URL | | http://127.0.0.1:3100 | |
 | DEPLOYMENTS_PATH | | （停用） | 部署清單 JSONL |
 | COLLECT_TIMEOUT | | 20s | context 收集總逾時 |

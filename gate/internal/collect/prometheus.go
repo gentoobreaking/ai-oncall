@@ -18,6 +18,25 @@ import (
 type PrometheusClient struct {
 	BaseURL string
 	Client  *http.Client
+
+	// ClusterURLs 依 alert 的 cluster label 分流的端點（T022）；
+	// nil 或查無此叢集時用 BaseURL。
+	ClusterURLs map[string]string
+}
+
+// promEndpoint 共用 helper：依 labels["cluster"] 選擇 Prometheus 端點。
+// 未帶 cluster、未設定分流表或查無此叢集 → 回傳預設 base（單叢集部署不受影響）。
+func promEndpoint(base string, clusterURLs map[string]string, labels map[string]string) string {
+	if c := labels["cluster"]; c != "" && clusterURLs != nil {
+		if u := clusterURLs[c]; u != "" {
+			return u
+		}
+	}
+	return base
+}
+
+func (p *PrometheusClient) endpoint(labels map[string]string) string {
+	return promEndpoint(p.BaseURL, p.ClusterURLs, labels)
 }
 
 func (p *PrometheusClient) Name() string { return "prometheus" }
@@ -33,7 +52,7 @@ func (p *PrometheusClient) Collect(ctx context.Context, labels map[string]string
 
 	queries := promQueries(labels)
 	for _, q := range queries {
-		series, err := p.queryRange(ctx, client, q.Expr, since, until)
+		series, err := p.queryRange(ctx, client, p.endpoint(labels), q.Expr, since, until)
 		if err != nil {
 			return bundleFragment{}, fmt.Errorf("query %q: %w", q.Name, err)
 		}
@@ -66,8 +85,8 @@ func promQueries(labels map[string]string) []promQuery {
 }
 
 // queryRange 呼叫 /api/v1/query_range，只保留數值樣本。
-func (p *PrometheusClient) queryRange(ctx context.Context, client *http.Client, expr string, since, until time.Time) (*oncallv1.MetricSeries, error) {
-	u, err := url.Parse(p.BaseURL + "/api/v1/query_range")
+func (p *PrometheusClient) queryRange(ctx context.Context, client *http.Client, baseURL, expr string, since, until time.Time) (*oncallv1.MetricSeries, error) {
+	u, err := url.Parse(baseURL + "/api/v1/query_range")
 	if err != nil {
 		return nil, err
 	}

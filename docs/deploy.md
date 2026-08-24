@@ -107,6 +107,9 @@ CORE_ADDR=<core 的 tailscale/wg IP>:50051    # 如 100.64.0.3:50051
 LISTEN_ADDR=0.0.0.0:8080                     # webhook 需被 AM 觸及
 PROMETHEUS_URL=http://prometheus:9090
 LOKI_URL=http://loki:3100
+# 多叢集分流（T022）：alert 帶 cluster label 時查詢導向對應端點；
+# 未帶 cluster 或查無此叢集 → 用 PROMETHEUS_URL 預設端點
+# PROMETHEUS_CLUSTERS=aws-prod=http://prom-aws:9090,gcp-prod=http://prom-gcp:9090
 # TELEGRAM_BOT_TOKEN 未設定時自動 log-only 降級
 ```
 

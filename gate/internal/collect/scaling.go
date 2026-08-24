@@ -26,6 +26,9 @@ type ScalingClient struct {
 
 	// ServiceLabel 對應警報 labels 的服務務鍵（預設 "service"）
 	ServiceLabel string
+
+	// ClusterURLs 依 alert 的 cluster label 分流的端點（T022）；同 PrometheusClient
+	ClusterURLs map[string]string
 }
 
 func (s *ScalingClient) Name() string { return "scaling" }
@@ -47,8 +50,9 @@ func (s *ScalingClient) Collect(ctx context.Context, labels map[string]string, s
 		client = &http.Client{Timeout: 10 * time.Second}
 	}
 
+	base := promEndpoint(s.PromBaseURL, s.ClusterURLs, labels)
 	expr := fmt.Sprintf(`kube_deployment_status_replicas{service=%q}`, svc)
-	points, err := s.queryRangePoints(ctx, client, expr, since.Add(-5*time.Minute), until)
+	points, err := s.queryRangePoints(ctx, client, base, expr, since.Add(-5*time.Minute), until)
 	if err != nil {
 		return bundleFragment{}, err
 	}
@@ -91,8 +95,8 @@ type replicaPoint struct {
 	replicas float64
 }
 
-func (s *ScalingClient) queryRangePoints(ctx context.Context, client *http.Client, expr string, since, until time.Time) ([]replicaPoint, error) {
-	u, err := url.Parse(s.PromBaseURL + "/api/v1/query_range")
+func (s *ScalingClient) queryRangePoints(ctx context.Context, client *http.Client, baseURL, expr string, since, until time.Time) ([]replicaPoint, error) {
+	u, err := url.Parse(baseURL + "/api/v1/query_range")
 	if err != nil {
 		return nil, err
 	}

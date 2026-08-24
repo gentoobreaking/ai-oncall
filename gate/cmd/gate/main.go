@@ -153,8 +153,8 @@ func (a coreClientAdapter) ActionCallback(
 // buildCollectors 依設定建構 context 收集器集合。
 func buildCollectors(cfg config.Config) []collect.Collector {
 	cs := []collect.Collector{
-		&collect.PrometheusClient{BaseURL: cfg.PrometheusURL},
-		&collect.ScalingClient{PromBaseURL: cfg.PrometheusURL},
+		&collect.PrometheusClient{BaseURL: cfg.PrometheusURL, ClusterURLs: cfg.ClusterPromURLs},
+		&collect.ScalingClient{PromBaseURL: cfg.PrometheusURL, ClusterURLs: cfg.ClusterPromURLs},
 		&collect.LokiClient{BaseURL: cfg.LokiURL},
 	}
 	if cfg.DeploymentsPath != "" {

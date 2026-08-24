@@ -138,3 +138,33 @@ func TestValidate_BadURL(t *testing.T) {
 func contains(s, sub string) bool {
 	return strings.Contains(s, sub)
 }
+
+// ---- T022：PROMETHEUS_CLUSTERS 解析 ----
+
+func TestParseClusterPromURLs(t *testing.T) {
+	m, err := ParseClusterPromURLs("aws-prod=http://prom-aws:9090, gcp-prod=http://prom-gcp:9090/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m["aws-prod"] != "http://prom-aws:9090" || m["gcp-prod"] != "http://prom-gcp:9090" {
+		t.Fatalf("parsed = %v", m)
+	}
+	for _, bad := range []string{"noequals", "a=", "=http://x", ","} {
+		if _, err := ParseClusterPromURLs(bad); err == nil {
+			t.Fatalf("bad input %q must error", bad)
+		}
+	}
+}
+
+func TestLoadClusterPromURLsFromEnv(t *testing.T) {
+	t.Setenv("SHARED_SECRET", "s")
+	t.Setenv("CORE_ADDR", "localhost:50051")
+	t.Setenv("PROMETHEUS_CLUSTERS", "aws-prod=http://prom-aws:9090")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.ClusterPromURLs["aws-prod"] != "http://prom-aws:9090" {
+		t.Fatalf("env not wired: %v", cfg.ClusterPromURLs)
+	}
+}
