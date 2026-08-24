@@ -1,0 +1,17 @@
+# 建置上下文排除——保持映像小且不含機密
+.git
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+core/data
+shadow_reports/
+eval_reports/
+audit/
+incidents_repo/
+gate/bin
+**/*.db
+.env
+.env.*
+*.pem
+*.key

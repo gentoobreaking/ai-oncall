@@ -3,10 +3,14 @@ GO := go
 GOCACHE ?= $(HOME)/go/.cache/go-build
 export GOCACHE
 
-.PHONY: help proto-lint proto-gen gate-build gate-vet gate-test gate-lint build lint test clean
+.PHONY: help proto-lint proto-gen gate-build gate-vet gate-test gate-lint \
+        build lint test clean \
+        docker-build docker-up docker-down docker-logs docker-clean
 
 help: ## 列出可用目標
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "%-14s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "%-16s %s\n", $$1, $$2}'
+
+# ----- proto 契約 -----
 
 proto-lint: ## buf lint 檢查 proto 契約
 	buf lint
@@ -18,6 +22,8 @@ proto-gen: ## 產生 Go stubs（gate/gen）與 Python stubs（core/src/oncall_co
 		--python_out=core/src/oncall_core/_proto \
 		--pyi_out=core/src/oncall_core/_proto \
 		proto/oncall/v1/oncall.proto
+
+# ----- oncall-gate (Go) -----
 
 gate-build: ## 建置 gate binary
 	cd gate && $(GO) build -o bin/gate ./cmd/gate
@@ -31,9 +37,29 @@ gate-test: ## gate 單元測試
 gate-lint: gate-vet ## gate lint（vet；golangci-lint 若存在則加跑）
 	cd gate && command -v golangci-lint >/dev/null && golangci-lint run || true
 
+# ----- 彙總 -----
+
 build: gate-build ## 全部建置
 lint: proto-lint gate-lint ## 全部 lint
-test: gate-test ## 全部測試
+test: gate-test ## 全部測試（core/ui 測試見各目錄 uv run pytest）
+
+# ----- 容器化 -----
+
+docker-build: ## 建置三服務映像（gate/core/ui）
+	docker compose -f deploy/docker-compose.yml build
+
+docker-up: ## 啟動三服務（需 SHARED_SECRET 等環境變數）
+	SHARED_SECRET=$${SHARED_SECRET:-dev-secret} \
+		docker compose -f deploy/docker-compose.yml up -d --build
+
+docker-down: ## 停止三服務
+	docker compose -f deploy/docker-compose.yml down
+
+docker-logs: ## 追蹤三服務日誌
+	docker compose -f deploy/docker-compose.yml logs -f
+
+docker-clean: ## 移除容器與映像
+	docker compose -f deploy/docker-compose.yml down --rmi local -v
 
 clean: ## 清除建置產物
 	rm -rf gate/bin

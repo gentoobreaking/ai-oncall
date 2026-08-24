@@ -52,6 +52,21 @@ readapi(8090)/ui(8091) 只聽 127.0.0.1。
 
 ---
 
+## 1.5 容器化（推薦路徑）
+
+```bash
+make docker-build    # 建置 oncall-gate/core/ui 三映像（alpine base）
+SHARED_SECRET=<secret> make docker-up
+curl http://127.0.0.1:8080/healthz   # gate
+curl http://127.0.0.1:8091/healthz   # ui
+```
+
+- 映像：multi-stage、non-root、alpine base；gate 最終層僅單一 binary
+- core 資料落 `core-data` volume；readapi/gRPC 端口不映射公網
+- 生產環境變數以 env_file/外部環境注入（見 deploy/docker-compose.yml 註解）
+
+以下為 systemd 直接部署路徑。
+
 ## 2. oncall-core（Python daemon）
 
 ```bash

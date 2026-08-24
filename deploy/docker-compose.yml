@@ -1,39 +1,61 @@
-# docker-compose.yml —— core + ui（NAS/家裡，alpine base）
-# gate 建議以 systemd binary 部署於生產網段；如需容器版：
-#   docker build -f deploy/gate.Dockerfile -t oncall-gate .
+# ai-oncall 三服務佈建
+#
+# 安全鐵律（spec §2.3/§5 標準 9）：
+# - gate↔core gRPC 走 WireGuard/Tailscale 內網或 mTLS，禁止明文暴露公網
+# - core readapi 與 ui 僅綁 loopback／內網；ui 對外一律經反向代理認證
+# - 上線前：SHADOW_MODE=1，影子報告評分達標才可關閉（spec §5 標準 11）
+#
+# secrets 一律走 env_file / 外部環境，禁止寫進本檔。
 
 services:
-  core:
-    image: python:3.12-alpine
-    working_dir: /app
-    command: >
-      sh -c "apk add --no-cache uv &&
-             uv sync &&
-             uv run python -m oncall_core --db /data/oncall.db --addr 0.0.0.0:50051"
+  gate:
+    build:
+      context: ..
+      dockerfile: deploy/gate.Dockerfile
+    image: oncall-gate:latest
+    restart: unless-stopped
     environment:
-      - SHADOW_MODE=1            # 上線門檻通過前必開
-    volumes:
-      - ../core:/app
-      - core-data:/data
+      # 必填——請以 env_file 或外部環境提供實際值
+      SHARED_SECRET: ${SHARED_SECRET:?set SHARED_SECRET}
+      CORE_ADDR: core:50051
+      LISTEN_ADDR: 0.0.0.0:8080
+      PROMETHEUS_URL: ${PROMETHEUS_URL:-http://prometheus:9090}
+      LOKI_URL: ${LOKI_URL:-http://loki:3100}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     ports:
-      - "127.0.0.1:50051:50051"  # 僅本機/wireguard 可達
+      # webhook 端點：AlertManager 需觸及；生產環境建議僅開內網
+      - "${GATE_WEBHOOK_BIND:-127.0.0.1}:8080:8080"
+    volumes:
+      - gate-data:/data
+
+  core:
+    build:
+      context: ..
+      dockerfile: deploy/core.Dockerfile
+    image: oncall-core:latest
+    restart: unless-stopped
+    environment:
+      - SHADOW_MODE=${SHADOW_MODE:-1}   # 上線門檻通過前必開（spec §5 標準 11）
+    volumes:
+      - core-data:/data
+    expose:
+      - "50051"   # gRPC——僅限內網（wireguard/tailscale），不得映射公網
+      - "8090"    # readapi——僅供 ui
 
   ui:
-    image: python:3.12-alpine
-    working_dir: /app
-    command: >
-      sh -c "apk add --no-cache uv &&
-             uv sync --no-dev &&
-             uv run python -m oncall_ui --host 0.0.0.0 --port 8091"
+    build:
+      context: ..
+      dockerfile: deploy/ui.Dockerfile
+    image: oncall-ui:latest
+    restart: unless-stopped
     environment:
       - READAPI_URL=http://core:8090
-    volumes:
-      - ../ui:/app
-      - ../core:/core
     depends_on:
       - core
     ports:
-      - "127.0.0.1:8091:8091"    # 對外一律經反向代理認證
+      # 唯讀 UI：對外一律經反向代理認證，預設只綁本機
+      - "${UI_BIND:-127.0.0.1}:8091:8091"
 
 volumes:
   core-data:
+  gate-data:
